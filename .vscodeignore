@@ -1,0 +1,14 @@
+.vscode/**
+.forge/**
+docs/**
+test/**
+src/**
+webview/**
+node_modules/**
+.gitignore
+.claude/**
+*.test.ts
+tsconfig.json
+biome.json
+vitest.config.ts
+esbuild.config.mjs

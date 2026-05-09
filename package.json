@@ -1,0 +1,129 @@
+{
+  "name": "human-markdown",
+  "displayName": "Human Markdown",
+  "description": "A WYSIWYG markdown editor for VSCode. Read and edit markdown as a human.",
+  "version": "0.1.0",
+  "publisher": "purecontext-dev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/purecontext-dev/human-markdown"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "humanMarkdown.preview",
+        "displayName": "Human Markdown",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "humanMarkdown.toggle",
+        "title": "Human Markdown: Toggle WYSIWYG / Raw"
+      },
+      {
+        "command": "humanMarkdown.selectTheme",
+        "title": "Human Markdown: Select Theme"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "humanMarkdown.toggle",
+        "key": "cmd+shift+v",
+        "when": "resourceExtname == .md"
+      }
+    ],
+    "configuration": {
+      "title": "Human Markdown",
+      "properties": {
+        "humanMarkdown.defaultMode": {
+          "type": "string",
+          "default": "wysiwyg",
+          "enum": [
+            "wysiwyg",
+            "raw"
+          ],
+          "description": "Default mode when opening markdown files"
+        },
+        "humanMarkdown.theme": {
+          "type": "string",
+          "default": "light",
+          "enum": [
+            "light",
+            "dark",
+            "github"
+          ],
+          "description": "Active theme for the rendered view"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "package": "pnpm build && vsce package --no-dependencies",
+    "publish": "pnpm build && vsce publish --no-dependencies",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@vscode/vsce": "^3.0.0"
+  },
+  "dependencies": {
+    "@milkdown/core": "^7.6.0",
+    "@milkdown/ctx": "^7.6.0",
+    "@milkdown/kit": "^7.6.0",
+    "@milkdown/plugin-listener": "^7.6.0",
+    "@milkdown/preset-commonmark": "^7.6.0",
+    "@milkdown/preset-gfm": "^7.6.0",
+    "@milkdown/prose": "^7.6.0",
+    "@tailwindcss/typography": "^0.5.0",
+    "gray-matter": "^4.0.0",
+    "katex": "^0.16.0",
+    "markdown-it": "^14.0.0",
+    "markdown-it-anchor": "^9.0.0",
+    "markdown-it-container": "^4.0.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.0",
+    "mermaid": "^11.0.0",
+    "shiki": "^1.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "esbuild"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,json,md}": [
+      "biome check --write"
+    ]
+  }
+}

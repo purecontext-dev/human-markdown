@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "forge-marketplace": {
+      "source": {
+        "source": "directory",
+        "path": "/Users/jeffreese/Code/forge"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "forge@forge-marketplace": true
+  }
+}
