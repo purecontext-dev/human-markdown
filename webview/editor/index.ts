@@ -10,6 +10,9 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
+import { codeBlockView } from './code-block-view'
+import { keyboardNavPlugin } from './keyboard-nav'
+import { injectEditorStyles } from './styles'
 
 interface VsCodeApi {
   postMessage(message: unknown): void
@@ -32,6 +35,8 @@ const vscode = acquireVsCodeApi()
 let editor: Editor | null = null
 let currentContent = ''
 let suppressUpdate = false
+
+injectEditorStyles()
 
 async function initEditor(content: string) {
   const root = document.getElementById('editor')
@@ -56,6 +61,8 @@ async function initEditor(content: string) {
     .use(commonmark)
     .use(gfm)
     .use(listener)
+    .use(codeBlockView)
+    .use(keyboardNavPlugin)
     .create()
 
   editor.action((ctx) => {

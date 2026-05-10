@@ -1,0 +1,145 @@
+import type { Ctx } from '@milkdown/ctx'
+import { $view } from '@milkdown/kit/utils'
+import { codeBlockSchema } from '@milkdown/preset-commonmark'
+import type { Node as ProsemirrorNode } from '@milkdown/prose/model'
+import type { EditorView } from '@milkdown/prose/view'
+
+interface MermaidApi {
+  initialize(config: Record<string, unknown>): void
+  render(id: string, source: string): Promise<{ svg: string }>
+}
+
+let mermaidInitialized = false
+
+function getMermaid(): MermaidApi | null {
+  return (window as unknown as Record<string, unknown>).__mermaid as MermaidApi | null
+}
+
+async function renderMermaid(source: string, container: HTMLElement): Promise<void> {
+  try {
+    const mermaid = getMermaid()
+    if (!mermaid) {
+      container.textContent = 'Mermaid not available'
+      container.classList.add('mermaid-error')
+      return
+    }
+
+    if (!mermaidInitialized) {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: detectTheme() === 'github-dark' ? 'dark' : 'default',
+      })
+      mermaidInitialized = true
+    }
+
+    const id = `mermaid-${crypto.randomUUID()}`
+    const { svg } = await mermaid.render(id, source)
+    container.innerHTML = svg
+  } catch (err) {
+    container.textContent = `Diagram error: ${err instanceof Error ? err.message : String(err)}`
+    container.classList.add('mermaid-error')
+  }
+}
+
+function detectTheme(): 'github-light' | 'github-dark' {
+  const bg = getComputedStyle(document.documentElement).getPropertyValue(
+    '--vscode-editor-background',
+  )
+  if (!bg) return 'github-light'
+  const r = Number.parseInt(bg.trim().slice(1, 3), 16)
+  return Number.isNaN(r) || r < 128 ? 'github-dark' : 'github-light'
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
+  return (node: ProsemirrorNode, _view: EditorView, _getPos: () => number | undefined) => {
+    const container = document.createElement('div')
+    container.classList.add('code-block-view')
+
+    const langLabel = document.createElement('span')
+    langLabel.classList.add('code-lang')
+    container.appendChild(langLabel)
+
+    const pre = document.createElement('pre')
+    const code = document.createElement('code')
+    pre.appendChild(code)
+    container.appendChild(pre)
+
+    let currentLang = (node.attrs as Record<string, string>).language || ''
+    langLabel.textContent = currentLang
+    const isMermaid = currentLang === 'mermaid'
+    if (isMermaid) container.classList.add('is-mermaid')
+
+    let rendered: HTMLDivElement | null = null
+
+    if (isMermaid) {
+      rendered = document.createElement('div')
+      rendered.classList.add('mermaid-rendered')
+      container.insertBefore(rendered, pre)
+    } else {
+      rendered = document.createElement('div')
+      rendered.classList.add('code-rendered')
+      container.insertBefore(rendered, pre)
+    }
+
+    let lastText = node.textContent
+
+    function updateRendered(text?: string) {
+      const content = text ?? code.textContent ?? lastText
+      if (!rendered) return
+      if (!content) {
+        rendered.textContent = '[empty content]'
+        return
+      }
+      lastText = content
+
+      if (isMermaid) {
+        renderMermaid(content, rendered)
+      } else {
+        rendered.innerHTML = `<pre><code>${escapeHtml(content)}</code></pre>`
+      }
+    }
+
+    updateRendered(node.textContent)
+
+    container.addEventListener('focusin', () => {
+      container.classList.add('editing')
+    })
+
+    container.addEventListener('focusout', (e) => {
+      const related = (e as FocusEvent).relatedTarget as Node | null
+      if (related && container.contains(related)) return
+      container.classList.remove('editing')
+      updateRendered()
+    })
+
+    return {
+      dom: container,
+      contentDOM: code,
+      update(updatedNode: ProsemirrorNode) {
+        if (updatedNode.type.name !== 'code_block') return false
+        const newLang = (updatedNode.attrs as Record<string, string>).language || ''
+        if (newLang !== currentLang) {
+          currentLang = newLang
+          langLabel.textContent = currentLang
+        }
+        lastText = updatedNode.textContent
+        if (!container.classList.contains('editing')) {
+          updateRendered(updatedNode.textContent)
+        }
+        return true
+      },
+      ignoreMutation(mutation: { target: Node; type: string }) {
+        if (rendered && (mutation.target === rendered || rendered.contains(mutation.target)))
+          return true
+        if (langLabel.contains(mutation.target)) return true
+        return false
+      },
+      destroy() {},
+    }
+  }
+})

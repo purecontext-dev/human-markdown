@@ -44,15 +44,15 @@ date: 2026-05-09
 
 ## Epic 5: WYSIWYG Editor
 
-- [ ] Milkdown editor initialization with shared rendering pipeline
-- [ ] Block nodeViews: paragraphs and headings (click to edit, click away to render)
-- [ ] Block nodeViews: lists (ordered, unordered, task lists with interactive checkboxes)
-- [ ] Block nodeViews: code blocks (edit raw, render with Shiki)
-- [ ] Block nodeViews: blockquotes, images
-- [ ] Block nodeViews: tables (attempt inline cell editing)
-- [ ] Bidirectional document sync: edits → markdown → TextDocument via postMessage
-- [ ] Round-trip fidelity test suite: real-world markdown corpus
-- [ ] Keyboard navigation: Tab/Shift+Tab between blocks, Escape to exit edit
+- [x] Milkdown editor initialization with shared rendering pipeline
+- [x] Block nodeViews: paragraphs and headings (always-editable, theme-styled)
+- [x] Block nodeViews: lists (ordered, unordered, task lists with interactive checkboxes)
+- [x] Block nodeViews: code blocks (edit raw, render with Shiki)
+- [x] Block nodeViews: blockquotes, images
+- [x] Block nodeViews: tables (inline cell editing via GFM preset)
+- [x] Bidirectional document sync: edits → markdown → TextDocument via postMessage
+- [x] Round-trip fidelity test suite: real-world markdown corpus
+- [x] Keyboard navigation: Tab/Shift+Tab between blocks, Escape to exit edit
 
 ## Epic 6: Theming
 
