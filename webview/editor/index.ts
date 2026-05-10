@@ -5,24 +5,41 @@ import {
   remarkStringifyOptionsCtx,
   rootCtx,
 } from '@milkdown/core'
+import { replaceAll } from '@milkdown/kit/utils'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 
-declare global {
-  interface Window {
-    __INITIAL_CONTENT__: string
-  }
+interface VsCodeApi {
+  postMessage(message: unknown): void
+  getState(): WebviewState | undefined
+  setState(state: WebviewState): void
 }
 
-async function initEditor() {
+interface WebviewState {
+  scrollTop: number
+}
+
+declare function acquireVsCodeApi(): VsCodeApi
+
+type ExtensionMessage =
+  | { type: 'update'; content: string }
+  | { type: 'restore-state'; state: WebviewState }
+
+const vscode = acquireVsCodeApi()
+
+let editor: Editor | null = null
+let currentContent = ''
+let suppressUpdate = false
+
+async function initEditor(content: string) {
   const root = document.getElementById('editor')
   if (!root) return
 
-  const content = window.__INITIAL_CONTENT__ ?? '# Hello\n\nStart editing...'
+  currentContent = content
 
-  const editor = await Editor.make()
+  editor = await Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, content)
@@ -31,7 +48,9 @@ async function initEditor() {
         rule: '-',
       })
       ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
-        console.log('[human-markdown] content updated, length:', markdown.length)
+        if (suppressUpdate) return
+        currentContent = markdown
+        vscode.postMessage({ type: 'edit', content: markdown })
       })
     })
     .use(commonmark)
@@ -44,4 +63,42 @@ async function initEditor() {
   })
 }
 
-initEditor()
+function updateContent(content: string) {
+  if (!editor || content === currentContent) return
+
+  currentContent = content
+  suppressUpdate = true
+  editor.action(replaceAll(content))
+  suppressUpdate = false
+}
+
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
+
+function saveScrollState() {
+  if (scrollTimer) clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => {
+    const state: WebviewState = { scrollTop: document.documentElement.scrollTop }
+    vscode.setState(state)
+    vscode.postMessage({ type: 'save-state', state })
+  }, 150)
+}
+
+window.addEventListener('message', (event) => {
+  const msg: ExtensionMessage = event.data
+  switch (msg.type) {
+    case 'update':
+      if (editor) {
+        updateContent(msg.content)
+      } else {
+        initEditor(msg.content)
+      }
+      break
+    case 'restore-state':
+      document.documentElement.scrollTop = msg.state.scrollTop
+      break
+  }
+})
+
+window.addEventListener('scroll', () => saveScrollState(), { passive: true })
+
+vscode.postMessage({ type: 'ready' })
