@@ -25,11 +25,11 @@ date: 2026-05-09
 
 ## Epic 3: Extension Shell
 
-- [ ] Implement `CustomTextEditorProvider` — register for `.md` files
-- [ ] Webview creation and lifecycle (create, retain on toggle, dispose on tab close)
-- [ ] Document sync: send TextDocument content to webview on open and external change
-- [ ] Mode toggle: `Cmd+Shift+V` switches between custom editor and default text editor
-- [ ] State persistence: scroll position and collapsed sections via `webview.setState`/`getState`
+- [x] Implement `CustomTextEditorProvider` — register for `.md` files
+- [x] Webview creation and lifecycle (create, retain on toggle, dispose on tab close)
+- [x] Document sync: send TextDocument content to webview on open and external change
+- [x] Mode toggle: `Cmd+Shift+V` switches between custom editor and default text editor
+- [x] State persistence: scroll position and collapsed sections via `webview.setState`/`getState`
 
 ## Epic 4: Rendering Pipeline
 
