@@ -56,11 +56,11 @@ date: 2026-05-09
 
 ## Epic 6: Theming
 
-- [ ] Light theme (JSON design tokens + @tailwindcss/typography prose classes)
-- [ ] Dark theme
-- [ ] GitHub theme (match GitHub's actual markdown rendering)
-- [ ] Theme selection via command palette
-- [ ] Theme selection via extension settings
+- [x] Light theme (JSON design tokens + @tailwindcss/typography prose classes)
+- [x] Dark theme
+- [x] GitHub theme (match GitHub's actual markdown rendering)
+- [x] Theme selection via command palette
+- [x] Theme selection via extension settings
 
 ## Epic 7: Stability & Security
 

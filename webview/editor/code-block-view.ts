@@ -43,12 +43,14 @@ async function renderMermaid(source: string, container: HTMLElement): Promise<vo
 }
 
 function detectTheme(): 'github-light' | 'github-dark' {
-  const bg = getComputedStyle(document.documentElement).getPropertyValue(
-    '--vscode-editor-background',
-  )
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--hm-color-bg')
   if (!bg) return 'github-light'
-  const r = Number.parseInt(bg.trim().slice(1, 3), 16)
-  return Number.isNaN(r) || r < 128 ? 'github-dark' : 'github-light'
+  const trimmed = bg.trim()
+  if (trimmed.startsWith('#')) {
+    const r = Number.parseInt(trimmed.slice(1, 3), 16)
+    return Number.isNaN(r) || r < 128 ? 'github-dark' : 'github-light'
+  }
+  return 'github-light'
 }
 
 function escapeHtml(str: string): string {

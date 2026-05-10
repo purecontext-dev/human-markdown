@@ -10,6 +10,8 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
+import type { ThemeTokens } from '../shared/theme/tokens'
+import { applyTheme } from '../shared/theme/tokens'
 import { codeBlockView } from './code-block-view'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { injectEditorStyles } from './styles'
@@ -29,6 +31,7 @@ declare function acquireVsCodeApi(): VsCodeApi
 type ExtensionMessage =
   | { type: 'update'; content: string }
   | { type: 'restore-state'; state: WebviewState }
+  | { type: 'theme'; tokens: ThemeTokens }
 
 const vscode = acquireVsCodeApi()
 
@@ -102,6 +105,9 @@ window.addEventListener('message', (event) => {
       break
     case 'restore-state':
       document.documentElement.scrollTop = msg.state.scrollTop
+      break
+    case 'theme':
+      applyTheme(msg.tokens, document.documentElement)
       break
   }
 })

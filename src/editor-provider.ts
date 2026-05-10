@@ -1,11 +1,13 @@
 import { randomBytes } from 'node:crypto'
 import * as vscode from 'vscode'
 import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from './messages'
+import { getConfiguredThemeName, resolveThemeTokens } from './theme-resolver'
 
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'humanMarkdown.preview'
 
   private readonly savedStates = new Map<string, { scrollTop: number }>()
+  private readonly webviews = new Set<vscode.Webview>()
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -35,7 +37,45 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.commands.executeCommand('vscode.openWith', resourceUri, targetViewType)
     })
 
-    return vscode.Disposable.from(registration, toggleCommand)
+    const selectThemeCommand = vscode.commands.registerCommand(
+      'humanMarkdown.selectTheme',
+      async () => {
+        const items: vscode.QuickPickItem[] = [
+          { label: 'Auto', description: 'Match VSCode color theme' },
+          { label: 'Light', description: 'Light prose theme' },
+          { label: 'Dark', description: 'Dark prose theme' },
+          { label: 'GitHub', description: 'Match GitHub markdown rendering' },
+        ]
+        const picked = await vscode.window.showQuickPick(items, {
+          placeHolder: 'Select a theme for Human Markdown',
+        })
+        if (!picked) return
+        const themeName = picked.label.toLowerCase()
+        await vscode.workspace
+          .getConfiguration('humanMarkdown')
+          .update('theme', themeName, vscode.ConfigurationTarget.Global)
+      },
+    )
+
+    const onConfigChange = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('humanMarkdown.theme')) {
+        provider.broadcastTheme()
+      }
+    })
+
+    const onColorThemeChange = vscode.window.onDidChangeActiveColorTheme(() => {
+      if (getConfiguredThemeName() === 'auto') {
+        provider.broadcastTheme()
+      }
+    })
+
+    return vscode.Disposable.from(
+      registration,
+      toggleCommand,
+      selectThemeCommand,
+      onConfigChange,
+      onColorThemeChange,
+    )
   }
 
   async resolveCustomTextEditor(
@@ -49,6 +89,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
 
     webview.html = this.getHtmlForWebview(webview)
+    this.webviews.add(webview)
 
     let suppressNextSync = false
 
@@ -56,6 +97,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       switch (msg.type) {
         case 'ready': {
           this.postMessage(webview, { type: 'update', content: document.getText() })
+          this.postMessage(webview, {
+            type: 'theme',
+            tokens: resolveThemeTokens(getConfiguredThemeName()),
+          })
           const saved = this.savedStates.get(document.uri.toString())
           if (saved) {
             this.postMessage(webview, { type: 'restore-state', state: saved })
@@ -91,9 +136,17 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     })
 
     webviewPanel.onDidDispose(() => {
+      this.webviews.delete(webview)
       onMessage.dispose()
       onDocChange.dispose()
     })
+  }
+
+  private broadcastTheme() {
+    const tokens = resolveThemeTokens(getConfiguredThemeName())
+    for (const webview of this.webviews) {
+      this.postMessage(webview, { type: 'theme', tokens })
+    }
   }
 
   private postMessage(webview: vscode.Webview, message: ExtensionToWebviewMessage) {
@@ -120,14 +173,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <style>
     body {
       margin: 0;
-      padding: 16px;
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-editor-foreground);
-      background-color: var(--vscode-editor-background);
+      padding: 16px 24px;
+      background-color: var(--hm-color-bg);
+      transition: background-color 0.15s ease;
     }
     #editor {
-      max-width: 800px;
+      max-width: var(--hm-max-width, 800px);
       margin: 0 auto;
     }
     .milkdown .editor {
