@@ -1,9 +1,8 @@
-import * as vscode from 'vscode'
+import type * as vscode from 'vscode'
+import { MarkdownEditorProvider } from './editor-provider'
 
 export function activate(context: vscode.ExtensionContext) {
-  // TODO: Register CustomTextEditorProvider
-  // TODO: Register toggle command
-  // TODO: Register theme selection command
+  context.subscriptions.push(MarkdownEditorProvider.register(context))
 }
 
 export function deactivate() {}
