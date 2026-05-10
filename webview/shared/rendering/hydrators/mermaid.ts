@@ -24,10 +24,12 @@ export async function renderMermaidBlocks(container: HTMLElement): Promise<void>
 }
 
 function detectMermaidTheme(): 'default' | 'dark' {
-  const bg = getComputedStyle(document.documentElement).getPropertyValue(
-    '--vscode-editor-background',
-  )
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--hm-color-bg')
   if (!bg) return 'default'
-  const r = Number.parseInt(bg.slice(1, 3), 16) || 128
-  return r < 128 ? 'dark' : 'default'
+  const trimmed = bg.trim()
+  if (trimmed.startsWith('#')) {
+    const r = Number.parseInt(trimmed.slice(1, 3), 16) || 128
+    return r < 128 ? 'dark' : 'default'
+  }
+  return 'default'
 }

@@ -6,11 +6,11 @@ export function injectEditorStyles() {
 
 const editorCSS = `
   .milkdown {
-    font-family: var(--vscode-font-family);
-    font-size: var(--vscode-font-size);
-    line-height: 1.6;
-    color: var(--vscode-editor-foreground);
-    max-width: 800px;
+    font-family: var(--hm-font-body);
+    font-size: var(--hm-font-size);
+    line-height: var(--hm-line-height);
+    color: var(--hm-color-text);
+    max-width: var(--hm-max-width);
     margin: 0 auto;
   }
 
@@ -24,11 +24,11 @@ const editorCSS = `
     margin-bottom: 0.5em;
     font-weight: 600;
     line-height: 1.25;
-    color: var(--vscode-editor-foreground);
+    color: var(--hm-color-heading);
   }
 
-  .milkdown h1 { font-size: 2em; border-bottom: 1px solid var(--vscode-editorGroup-border, #444); padding-bottom: 0.3em; }
-  .milkdown h2 { font-size: 1.5em; border-bottom: 1px solid var(--vscode-editorGroup-border, #444); padding-bottom: 0.3em; }
+  .milkdown h1 { font-size: 2em; border-bottom: 1px solid var(--hm-color-border); padding-bottom: 0.3em; }
+  .milkdown h2 { font-size: 1.5em; border-bottom: 1px solid var(--hm-color-border); padding-bottom: 0.3em; }
   .milkdown h3 { font-size: 1.25em; }
   .milkdown h4 { font-size: 1em; }
 
@@ -37,7 +37,7 @@ const editorCSS = `
   }
 
   .milkdown a {
-    color: var(--vscode-textLink-foreground, #3794ff);
+    color: var(--hm-color-link);
     text-decoration: none;
   }
   .milkdown a:hover {
@@ -47,15 +47,15 @@ const editorCSS = `
   .milkdown blockquote {
     margin: 0 0 1em;
     padding: 0 1em;
-    border-left: 3px solid var(--vscode-textBlockQuote-border, #555);
-    color: var(--vscode-descriptionForeground, #999);
+    border-left: 3px solid var(--hm-color-blockquote-border);
+    color: var(--hm-color-blockquote-text);
   }
 
   .milkdown code {
-    font-family: var(--vscode-editor-font-family, monospace);
+    font-family: var(--hm-font-code);
     font-size: 0.875em;
-    background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
-    color: var(--vscode-editor-foreground);
+    background: var(--hm-color-code-bg);
+    color: var(--hm-color-code-text);
     padding: 0.2em 0.4em;
     border-radius: 3px;
   }
@@ -63,7 +63,7 @@ const editorCSS = `
   .milkdown pre {
     margin: 0 0 1em;
     padding: 1em;
-    background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
+    background: var(--hm-color-code-bg);
     border-radius: 6px;
     overflow-x: auto;
   }
@@ -89,7 +89,7 @@ const editorCSS = `
 
   .milkdown hr {
     border: none;
-    border-top: 1px solid var(--vscode-editorGroup-border, #444);
+    border-top: 1px solid var(--hm-color-border);
     margin: 1.5em 0;
   }
 
@@ -99,12 +99,12 @@ const editorCSS = `
     margin: 0 0 1em;
   }
   .milkdown th, .milkdown td {
-    border: 1px solid var(--vscode-editorGroup-border, #444);
+    border: 1px solid var(--hm-color-table-border);
     padding: 0.5em 1em;
     text-align: left;
   }
   .milkdown th {
-    background: var(--vscode-editorWidget-background, rgba(128,128,128,0.1));
+    background: var(--hm-color-table-header-bg);
     font-weight: 600;
   }
 
@@ -117,12 +117,12 @@ const editorCSS = `
     position: absolute;
     inset: 0;
     padding: 1em;
-    background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
+    background: var(--hm-color-code-bg);
     border-radius: 6px;
     overflow: hidden;
     pointer-events: none;
     z-index: 1;
-    color: var(--vscode-editor-foreground);
+    color: var(--hm-color-code-text);
   }
 
   .milkdown .code-block-view .code-rendered pre {
@@ -140,7 +140,7 @@ const editorCSS = `
     top: 0.5em;
     right: 0.5em;
     font-size: 0.75em;
-    color: var(--vscode-descriptionForeground, #999);
+    color: var(--hm-color-text-muted);
     z-index: 2;
     pointer-events: none;
   }
@@ -155,7 +155,7 @@ const editorCSS = `
 
   .milkdown .code-block-view .mermaid-rendered {
     padding: 1em;
-    background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
+    background: var(--hm-color-code-bg);
     border-radius: 6px;
     display: flex;
     justify-content: center;
@@ -171,9 +171,9 @@ const editorCSS = `
   }
 
   .milkdown .code-block-view .mermaid-error {
-    color: var(--vscode-errorForeground, #f48771);
+    color: #f48771;
     font-size: 0.875em;
-    font-family: var(--vscode-editor-font-family, monospace);
+    font-family: var(--hm-font-code);
     padding: 1em;
     white-space: pre-wrap;
   }

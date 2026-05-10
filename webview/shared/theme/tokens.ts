@@ -6,6 +6,7 @@ export interface ThemeTokens {
   '--hm-max-width': string
   '--hm-color-text': string
   '--hm-color-text-muted': string
+  '--hm-color-heading': string
   '--hm-color-bg': string
   '--hm-color-bg-secondary': string
   '--hm-color-border': string
@@ -20,36 +21,40 @@ export interface ThemeTokens {
   '--hm-color-frontmatter-border': string
 }
 
+export type ThemeName = 'auto' | 'light' | 'dark' | 'github'
+
 export const lightTheme: ThemeTokens = {
   '--hm-font-body': '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
   '--hm-font-code': '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
   '--hm-font-size': '16px',
-  '--hm-line-height': '1.6',
+  '--hm-line-height': '1.75',
   '--hm-max-width': '800px',
-  '--hm-color-text': '#24292f',
-  '--hm-color-text-muted': '#656d76',
+  '--hm-color-text': '#374151',
+  '--hm-color-text-muted': '#6b7280',
+  '--hm-color-heading': '#111827',
   '--hm-color-bg': '#ffffff',
-  '--hm-color-bg-secondary': '#f6f8fa',
-  '--hm-color-border': '#d0d7de',
-  '--hm-color-link': '#0969da',
-  '--hm-color-code-bg': '#f6f8fa',
-  '--hm-color-code-text': '#24292f',
-  '--hm-color-blockquote-border': '#d0d7de',
-  '--hm-color-blockquote-text': '#656d76',
-  '--hm-color-table-border': '#d0d7de',
-  '--hm-color-table-header-bg': '#f6f8fa',
-  '--hm-color-frontmatter-bg': '#f6f8fa',
-  '--hm-color-frontmatter-border': '#d0d7de',
+  '--hm-color-bg-secondary': '#f9fafb',
+  '--hm-color-border': '#e5e7eb',
+  '--hm-color-link': '#2563eb',
+  '--hm-color-code-bg': '#f3f4f6',
+  '--hm-color-code-text': '#374151',
+  '--hm-color-blockquote-border': '#e5e7eb',
+  '--hm-color-blockquote-text': '#6b7280',
+  '--hm-color-table-border': '#e5e7eb',
+  '--hm-color-table-header-bg': '#f9fafb',
+  '--hm-color-frontmatter-bg': '#f9fafb',
+  '--hm-color-frontmatter-border': '#e5e7eb',
 }
 
 export const darkTheme: ThemeTokens = {
   '--hm-font-body': '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
   '--hm-font-code': '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
   '--hm-font-size': '16px',
-  '--hm-line-height': '1.6',
+  '--hm-line-height': '1.75',
   '--hm-max-width': '800px',
   '--hm-color-text': '#e6edf3',
   '--hm-color-text-muted': '#8b949e',
+  '--hm-color-heading': '#f0f6fc',
   '--hm-color-bg': '#0d1117',
   '--hm-color-bg-secondary': '#161b22',
   '--hm-color-border': '#30363d',
@@ -64,9 +69,38 @@ export const darkTheme: ThemeTokens = {
   '--hm-color-frontmatter-border': '#30363d',
 }
 
-export const githubTheme: ThemeTokens = { ...lightTheme }
+export const githubTheme: ThemeTokens = {
+  '--hm-font-body':
+    '-apple-system, BlinkMacSystemFont, "Segoe UI Adjusted", "Segoe UI", "Liberation Sans", sans-serif',
+  '--hm-font-code':
+    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  '--hm-font-size': '16px',
+  '--hm-line-height': '1.5',
+  '--hm-max-width': '1012px',
+  '--hm-color-text': '#1f2328',
+  '--hm-color-text-muted': '#656d76',
+  '--hm-color-heading': '#1f2328',
+  '--hm-color-bg': '#ffffff',
+  '--hm-color-bg-secondary': '#f6f8fa',
+  '--hm-color-border': '#d0d7de',
+  '--hm-color-link': '#0969da',
+  '--hm-color-code-bg': 'rgba(175, 184, 193, 0.2)',
+  '--hm-color-code-text': '#1f2328',
+  '--hm-color-blockquote-border': '#d0d7de',
+  '--hm-color-blockquote-text': '#656d76',
+  '--hm-color-table-border': '#d0d7de',
+  '--hm-color-table-header-bg': '#f6f8fa',
+  '--hm-color-frontmatter-bg': '#f6f8fa',
+  '--hm-color-frontmatter-border': '#d0d7de',
+}
 
-export function applyTheme(tokens: ThemeTokens, root: HTMLElement = document.documentElement) {
+export const themes: Record<Exclude<ThemeName, 'auto'>, ThemeTokens> = {
+  light: lightTheme,
+  dark: darkTheme,
+  github: githubTheme,
+}
+
+export function applyTheme(tokens: ThemeTokens, root: HTMLElement) {
   for (const [property, value] of Object.entries(tokens)) {
     root.style.setProperty(property, value)
   }
