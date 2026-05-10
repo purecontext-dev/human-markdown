@@ -33,14 +33,14 @@ date: 2026-05-09
 
 ## Epic 4: Rendering Pipeline
 
-- [ ] markdown-it setup with GFM baseline (tables, task lists, strikethrough, autolinks)
-- [ ] Shiki integration for code block syntax highlighting
-- [ ] KaTeX integration for math rendering (lazy-loaded)
-- [ ] Mermaid integration for diagram rendering (lazy-loaded)
-- [ ] Footnotes, heading anchors, custom containers
-- [ ] Frontmatter parsing (gray-matter) and metadata card rendering
-- [ ] Code block copy button
-- [ ] Theme injection: CSS custom properties applied to rendered output
+- [x] markdown-it setup with GFM baseline (tables, task lists, strikethrough, autolinks)
+- [x] Shiki integration for code block syntax highlighting
+- [x] KaTeX integration for math rendering (lazy-loaded)
+- [x] Mermaid integration for diagram rendering (lazy-loaded)
+- [x] Footnotes, heading anchors, custom containers
+- [x] Frontmatter parsing (gray-matter) and metadata card rendering
+- [x] Code block copy button
+- [x] Theme injection: CSS custom properties applied to rendered output
 
 ## Epic 5: WYSIWYG Editor
 

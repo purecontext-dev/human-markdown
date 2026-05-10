@@ -7,7 +7,7 @@ const distDir = join(__dirname, '../../dist')
 
 describe('bundle size', () => {
   it('webview bundle is under 500KB gzipped', () => {
-    const source = readFileSync(join(distDir, 'webview.js'))
+    const source = readFileSync(join(distDir, 'webview', 'index.js'))
     const gzipped = gzipSync(source)
     const sizeKB = gzipped.length / 1024
 

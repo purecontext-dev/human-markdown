@@ -16,11 +16,12 @@ const extensionConfig = {
 const webviewConfig = {
   entryPoints: ['webview/editor/index.ts'],
   bundle: true,
-  outfile: 'dist/webview.js',
+  outdir: 'dist/webview',
   format: 'esm',
   platform: 'browser',
   target: 'es2022',
   sourcemap: true,
+  splitting: true,
 }
 
 async function build() {
