@@ -26,11 +26,11 @@ Milkdown initializes in a VSCode webview via `CustomTextEditorProvider` with no 
 | --- | --- | --- | --- |
 | List markers (`-` → `*`) | remark-stringify default | Low | Yes — fixed with `bullet: '-'` |
 | Horizontal rules (`---` → `***`) | remark-stringify default | Low | Yes — fixed with `rule: '-'` |
-| Tight → loose lists (blank lines between items) | ProseMirror wraps list item content in paragraphs | Medium | No — structural to ProseMirror's document model |
+| Tight → loose lists (blank lines between items) | Milkdown bug: converts `spread` boolean to string via template literal; string `"false"` is truthy | Medium | Yes — fixed with `patchRemarkForTightLists` |
 | Bare URLs get angle brackets | GFM autolink creates link node, remark serializes as `<url>` | Low | Possible with custom remark plugin |
 | Table column padding | remark-gfm aligns columns | Low | No — but produces more readable output |
 
-**Assessment**: The loose list change is the most significant. It doesn't change rendering (both tight and loose lists render identically), but it does change the file on disk. This is a known limitation of ProseMirror-based editors and is shared by Tiptap. A custom remark plugin could potentially preserve tight/loose distinction, but this is a post-MVP optimization.
+**Assessment**: The biggest gap (loose lists) was caused by a Milkdown bug, not a ProseMirror limitation. Fixed with a remark stringify patch that normalizes `spread` properties on the MDAST tree. Remaining drift (autolink brackets, table padding) is cosmetic.
 
 ### 3. Block Editing UX: PASS (infrastructure ready, manual validation needed)
 
@@ -56,7 +56,7 @@ Table editing is built into the GFM preset we're already using. No additional wo
 
 ## Known Risks for Development
 
-1. **Loose list formatting**: Document the behavior, consider a custom remark plugin in a later iteration.
+1. **Milkdown spread bug**: The `parseMarkdown` runners in commonmark preset convert `spread` booleans to strings via template literal. Our `patchRemarkForTightLists` works around this. Monitor for upstream fix.
 2. **ProseMirror DOM requirements**: Round-trip tests need jsdom, adding test complexity.
 3. **Single-maintainer dependency**: Milkdown is maintained by Saul Mirone. Monitor for maintenance signals.
 

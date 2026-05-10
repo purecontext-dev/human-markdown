@@ -5,6 +5,7 @@ import {
   Editor,
   defaultValueCtx,
   editorViewCtx,
+  remarkCtx,
   remarkStringifyOptionsCtx,
   rootCtx,
   serializerCtx,
@@ -12,6 +13,7 @@ import {
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { describe, expect, it } from 'vitest'
+import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 
 const fixturesDir = join(__dirname, '__fixtures__')
 
@@ -43,6 +45,10 @@ async function roundTrip(markdown: string): Promise<string> {
     .use(gfm)
     .create()
 
+  editor.action((ctx) => {
+    patchRemarkForTightLists(ctx.get(remarkCtx))
+  })
+
   const serialized = editor.action((ctx) => {
     const serializer = ctx.get(serializerCtx)
     const view = ctx.get(editorViewCtx)
@@ -62,10 +68,8 @@ describe('round-trip fidelity', () => {
     expect(fixtures.length).toBeGreaterThanOrEqual(5)
   })
 
-  // Fixtures with content that Milkdown preserves exactly
-  const exactFixtures = ['basic-formatting', 'code-blocks']
-  // Fixtures with known formatting drift (loose lists, autolink brackets, table padding)
-  const driftFixtures = ['gfm-features', 'lists', 'mixed-content', 'tables']
+  const exactFixtures = ['basic-formatting', 'code-blocks', 'lists', 'mixed-content']
+  const driftFixtures = ['gfm-features', 'tables']
 
   describe('exact preservation', () => {
     for (const name of exactFixtures) {
@@ -98,12 +102,6 @@ describe('round-trip fidelity', () => {
   })
 
   describe('known formatting changes', () => {
-    it('converts tight lists to loose (blank lines between items)', async () => {
-      const input = '- one\n- two\n- three\n'
-      const output = await roundTrip(input)
-      expect(output).toContain('- one\n\n- two\n\n- three')
-    })
-
     it('wraps bare URLs in angle brackets', async () => {
       const input = 'Visit https://example.com for details.\n'
       const output = await roundTrip(input)

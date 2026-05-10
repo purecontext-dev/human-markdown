@@ -1,7 +1,14 @@
-import { Editor, defaultValueCtx, remarkStringifyOptionsCtx, rootCtx } from '@milkdown/core'
+import {
+  Editor,
+  defaultValueCtx,
+  remarkCtx,
+  remarkStringifyOptionsCtx,
+  rootCtx,
+} from '@milkdown/core'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
+import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 
 declare global {
   interface Window {
@@ -15,7 +22,7 @@ async function initEditor() {
 
   const content = window.__INITIAL_CONTENT__ ?? '# Hello\n\nStart editing...'
 
-  await Editor.make()
+  const editor = await Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, content)
@@ -31,6 +38,10 @@ async function initEditor() {
     .use(gfm)
     .use(listener)
     .create()
+
+  editor.action((ctx) => {
+    patchRemarkForTightLists(ctx.get(remarkCtx))
+  })
 }
 
 initEditor()
