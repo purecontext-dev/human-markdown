@@ -12,12 +12,8 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onLanguage:markdown"
-  ],
+  "categories": ["Other"],
+  "activationEvents": ["onLanguage:markdown"],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
@@ -55,20 +51,13 @@
         "humanMarkdown.defaultMode": {
           "type": "string",
           "default": "wysiwyg",
-          "enum": [
-            "wysiwyg",
-            "raw"
-          ],
+          "enum": ["wysiwyg", "raw"],
           "description": "Default mode when opening markdown files"
         },
         "humanMarkdown.theme": {
           "type": "string",
           "default": "light",
-          "enum": [
-            "light",
-            "dark",
-            "github"
-          ],
+          "enum": ["light", "dark", "github"],
           "description": "Active theme for the rendered view"
         }
       }
@@ -88,13 +77,16 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
+    "@types/jsdom": "^28.0.1",
+    "@types/node": "^25.6.2",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",
     "husky": "^9.0.0",
+    "jsdom": "^29.1.1",
     "lint-staged": "^15.0.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0",
-    "@vscode/vsce": "^3.0.0"
+    "vitest": "^2.1.0"
   },
   "dependencies": {
     "@milkdown/core": "^7.6.0",
@@ -116,14 +108,9 @@
     "shiki": "^1.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "esbuild"
-    ]
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
   },
   "lint-staged": {
-    "*.{ts,tsx,js,json,md}": [
-      "biome check --write"
-    ]
+    "*.{ts,tsx,js,json,md}": ["biome check --write"]
   }
 }

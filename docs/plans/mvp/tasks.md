@@ -16,12 +16,12 @@ date: 2026-05-09
 
 ## Epic 2: Prototype Spike (GATE)
 
-- [ ] Minimal webview with Milkdown editor loading a hardcoded markdown string
-- [ ] Round-trip fidelity test: load 5+ real-world .md files, edit blocks, compare output
-- [ ] Block editing UX: validate nodeView click-to-edit, click-away-to-render
-- [ ] Table editing: attempt inline cell editing via Milkdown table plugin
-- [ ] Bundle size measurement: selective imports, measure gzipped webview size
-- [ ] Spike decision: pass/fail assessment against 5 criteria (3+ must pass to proceed)
+- [x] Minimal webview with Milkdown editor loading a hardcoded markdown string
+- [x] Round-trip fidelity test: load 5+ real-world .md files, edit blocks, compare output
+- [x] Block editing UX: validate nodeView click-to-edit, click-away-to-render
+- [x] Table editing: attempt inline cell editing via Milkdown table plugin
+- [x] Bundle size measurement: selective imports, measure gzipped webview size
+- [x] Spike decision: pass/fail assessment against 5 criteria (3+ must pass to proceed)
 
 ## Epic 3: Extension Shell
 
