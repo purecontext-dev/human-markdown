@@ -104,6 +104,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'index.js'),
     )
+    const mermaidUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'mermaid.js'),
+    )
     const nonce = getNonce()
 
     return `<!DOCTYPE html>
@@ -112,7 +115,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource};">
+    content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; font-src ${webview.cspSource};">
   <title>Human Markdown</title>
   <style>
     body {
@@ -134,6 +137,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 </head>
 <body>
   <div id="editor"></div>
+  <script nonce="${nonce}" async src="${mermaidUri}"></script>
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
 </html>`

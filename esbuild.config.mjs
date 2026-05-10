@@ -16,22 +16,38 @@ const extensionConfig = {
 const webviewConfig = {
   entryPoints: ['webview/editor/index.ts'],
   bundle: true,
-  outdir: 'dist/webview',
+  outfile: 'dist/webview/index.js',
   format: 'esm',
   platform: 'browser',
   target: 'es2022',
   sourcemap: true,
-  splitting: true,
+}
+
+const mermaidConfig = {
+  entryPoints: ['webview/editor/mermaid-loader.ts'],
+  bundle: true,
+  outfile: 'dist/mermaid.js',
+  format: 'iife',
+  platform: 'browser',
+  target: 'es2022',
+  sourcemap: true,
+  minify: true,
+  external: ['fs'],
 }
 
 async function build() {
   if (isWatch) {
     const extCtx = await esbuild.context(extensionConfig)
     const webCtx = await esbuild.context(webviewConfig)
-    await Promise.all([extCtx.watch(), webCtx.watch()])
+    const mermaidCtx = await esbuild.context(mermaidConfig)
+    await Promise.all([extCtx.watch(), webCtx.watch(), mermaidCtx.watch()])
     console.log('Watching for changes...')
   } else {
-    await Promise.all([esbuild.build(extensionConfig), esbuild.build(webviewConfig)])
+    await Promise.all([
+      esbuild.build(extensionConfig),
+      esbuild.build(webviewConfig),
+      esbuild.build(mermaidConfig),
+    ])
     console.log('Build complete.')
   }
 }
