@@ -3,6 +3,7 @@ import { $view } from '@milkdown/kit/utils'
 import { codeBlockSchema } from '@milkdown/preset-commonmark'
 import type { Node as ProsemirrorNode } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
+import { observeBlock, unobserveBlock } from './viewport-observer'
 
 interface MermaidApi {
   initialize(config: Record<string, unknown>): void
@@ -106,7 +107,17 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
       }
     }
 
-    updateRendered(node.textContent)
+    if (isMermaid) {
+      observeBlock(
+        container,
+        () => updateRendered(node.textContent),
+        () => {
+          if (rendered) rendered.innerHTML = ''
+        },
+      )
+    } else {
+      updateRendered(node.textContent)
+    }
 
     container.addEventListener('focusin', () => {
       container.classList.add('editing')
@@ -141,7 +152,9 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         if (langLabel.contains(mutation.target)) return true
         return false
       },
-      destroy() {},
+      destroy() {
+        if (isMermaid) unobserveBlock(container)
+      },
     }
   }
 })

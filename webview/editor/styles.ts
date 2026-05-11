@@ -177,4 +177,23 @@ const editorCSS = `
     padding: 1em;
     white-space: pre-wrap;
   }
+
+  .error-banner {
+    background: rgba(244, 135, 113, 0.1);
+    border: 1px solid #f48771;
+    border-radius: 6px;
+    padding: 0.75em 1em;
+    margin-bottom: 1em;
+    font-size: 0.875em;
+    color: #f48771;
+  }
+
+  .fallback-raw {
+    font-family: var(--hm-font-code);
+    font-size: 0.875em;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--hm-color-text);
+  }
 `

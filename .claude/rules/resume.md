@@ -1,22 +1,14 @@
 # Session Resume Context
 
-## Working on
-Epic 7 (Stability & Security) is next. Epics 1–6 complete and merged/shipping.
+## Status
+MVP shipped. All 7 epics complete and merged. Next work is from the Future Plans backlog (custom-theming, spell-checking, export, search) or Shiki re-integration.
 
-## Completed
-Epic 6 (Theming) — token-driven theme system with auto/light/dark/github, command palette selection, settings watcher, all styles migrated from `--vscode-*` to `--hm-*` custom properties.
-
-## Key decisions made this session
-- **Theme model: "auto" default** — detects VSCode color kind, applies matching light/dark theme. Explicit selections override.
-- **Removed @tailwindcss/typography** — used its design values (line-height 1.75, gray-700 text, spacing) as basis for light theme tokens. Package itself was never imported at runtime.
-- **Theme tokens sent via postMessage** — extension host resolves `auto` → actual tokens, sends to webview. Webview just applies what it receives.
-- **GitHub theme is distinct** — GitHub's actual font stack, 1012px max-width, 1.5 line-height (vs light's 1.75), exact GitHub color values.
-
-## Next
-Epic 7: Stability & Security (CSP, error boundaries, graceful degradation, XSS test suite, large doc handling, memory monitoring, `pnpm audit` in CI). Also: re-add Shiki syntax highlighting as a separate task.
+## Key decisions
+- **XSS test assertions must be DOM-based** — regex matching on rendered HTML gives false positives (escaped content like `&lt;script` contains the keyword but is safe). Parse with DOMParser, check actual elements/attributes.
+- **Viewport-based lazy rendering for mermaid** — IntersectionObserver with 100% rootMargin for render, 200% for dispose. Prevents N mermaid diagrams from all rendering on large doc open.
+- **Frontmatter handles malformed YAML** — try/catch in parseFrontmatter, returns raw content on failure.
 
 ## Key context
-- `webview/shared/theme/tokens.ts` — all theme definitions + `applyTheme()`
-- `src/theme-resolver.ts` — resolves "auto" via `vscode.window.activeColorTheme.kind`
-- `src/editor-provider.ts` — broadcasts theme on ready + config/color-theme change
-- 42 tests pass, lint/typecheck clean, webview bundle 212KB gzipped
+- 78 tests pass (19 rendering, 6 theme, 36 XSS, 15 round-trip, 2 bundle)
+- Webview bundle 212KB gzipped
+- `pnpm audit --audit-level=high` in CI

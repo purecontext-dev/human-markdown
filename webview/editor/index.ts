@@ -47,30 +47,35 @@ async function initEditor(content: string) {
 
   currentContent = content
 
-  editor = await Editor.make()
-    .config((ctx) => {
-      ctx.set(rootCtx, root)
-      ctx.set(defaultValueCtx, content)
-      ctx.set(remarkStringifyOptionsCtx, {
-        bullet: '-',
-        rule: '-',
+  try {
+    editor = await Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root)
+        ctx.set(defaultValueCtx, content)
+        ctx.set(remarkStringifyOptionsCtx, {
+          bullet: '-',
+          rule: '-',
+        })
+        ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
+          if (suppressUpdate) return
+          currentContent = markdown
+          vscode.postMessage({ type: 'edit', content: markdown })
+        })
       })
-      ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
-        if (suppressUpdate) return
-        currentContent = markdown
-        vscode.postMessage({ type: 'edit', content: markdown })
-      })
-    })
-    .use(commonmark)
-    .use(gfm)
-    .use(listener)
-    .use(codeBlockView)
-    .use(keyboardNavPlugin)
-    .create()
+      .use(commonmark)
+      .use(gfm)
+      .use(listener)
+      .use(codeBlockView)
+      .use(keyboardNavPlugin)
+      .create()
 
-  editor.action((ctx) => {
-    patchRemarkForTightLists(ctx.get(remarkCtx))
-  })
+    editor.action((ctx) => {
+      patchRemarkForTightLists(ctx.get(remarkCtx))
+    })
+  } catch (err) {
+    editor = null
+    renderFallback(root, content, err)
+  }
 }
 
 function updateContent(content: string) {
@@ -78,8 +83,30 @@ function updateContent(content: string) {
 
   currentContent = content
   suppressUpdate = true
-  editor.action(replaceAll(content))
+  try {
+    editor.action(replaceAll(content))
+  } catch (err) {
+    const root = document.getElementById('editor')
+    if (root) renderFallback(root, content, err)
+  }
   suppressUpdate = false
+}
+
+function renderFallback(root: HTMLElement, content: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err)
+  root.innerHTML = ''
+
+  const banner = document.createElement('div')
+  banner.className = 'error-banner'
+  banner.textContent = `Editor error: ${message}`
+  root.appendChild(banner)
+
+  const pre = document.createElement('pre')
+  pre.className = 'fallback-raw'
+  const code = document.createElement('code')
+  code.textContent = content
+  pre.appendChild(code)
+  root.appendChild(pre)
 }
 
 let scrollTimer: ReturnType<typeof setTimeout> | null = null

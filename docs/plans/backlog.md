@@ -1,12 +1,12 @@
 ---
 title: "Plan Backlog"
 project: "human-markdown"
-date: 2026-05-09
+date: 2026-05-10
 ---
 
 # Plan Backlog
 
-1. **mvp** — WYSIWYG editing, rendering, toggle, themes, stability (7-10 weeks)
+No active plans. MVP shipped.
 
 ## Future Plans (not yet detailed)
 
