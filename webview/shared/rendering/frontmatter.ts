@@ -7,8 +7,12 @@ export interface FrontmatterResult {
 }
 
 export function parseFrontmatter(markdown: string): FrontmatterResult {
-  const { content, data } = matter(markdown)
-  return { content, data }
+  try {
+    const { content, data } = matter(markdown)
+    return { content, data }
+  } catch {
+    return { content: markdown, data: {} }
+  }
 }
 
 export function renderFrontmatterCard(data: Record<string, unknown>): string {

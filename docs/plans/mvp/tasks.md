@@ -64,10 +64,10 @@ date: 2026-05-09
 
 ## Epic 7: Stability & Security
 
-- [ ] Webview CSP: strict content security policy with nonces
-- [ ] Error boundaries: rendering failures isolated per section
-- [ ] Graceful degradation: plugin failures show raw block + error indicator
-- [ ] Adversarial XSS test suite: corpus of malicious markdown files
-- [ ] Large document handling: virtualization for 2000+ line files
-- [ ] Memory monitoring: dispose off-screen content under pressure
-- [ ] `pnpm audit` in CI — fail on high/critical vulnerabilities
+- [x] Webview CSP: strict content security policy with nonces
+- [x] Error boundaries: rendering failures isolated per section
+- [x] Graceful degradation: plugin failures show raw block + error indicator
+- [x] Adversarial XSS test suite: corpus of malicious markdown files
+- [x] Large document handling: virtualization for 2000+ line files
+- [x] Memory monitoring: dispose off-screen content under pressure
+- [x] `pnpm audit` in CI — fail on high/critical vulnerabilities
