@@ -1,14 +1,15 @@
 # Session Resume Context
 
 ## Status
-In-place mode toggle shipped (branch: `feat/in-place-mode-toggle`). PR created, pending merge.
+Post-MVP cleanup shipped (branch: `fix/post-mvp-cleanup`). PR created, pending merge.
 
 ## Key decisions
-- **CodeMirror fallback chosen over native editor swap** — `vscode.openWith` had unacceptable re-init cost; embedded CodeMirror in the webview instead.
-- **Font-family generic fallback** — VSCode's `editor.fontFamily` doesn't guarantee a generic CSS family. `escapeFontFamily()` appends `monospace` when none is present, preventing serif fallback in the webview sandbox.
-- **Zoom compensation factor is 1.1** — not 1.2. Matches VSCode's actual zoom step per `window.zoomLevel` unit.
+- **Shiki as separate IIFE bundle** — inline import blew bundle to 2.1MB. Follows the Mermaid pattern: separate `dist/shiki.js` loaded via `<script>` tag. Progressive enhancement — plain text first, highlight async.
+- **`$remark` needs explicit options** — Milkdown's `$remark` defaults `initialOptions` to `{}`, which `remark-frontmatter` misinterprets as a matter descriptor missing `type`. Must pass `['yaml']` explicitly.
+- **Frontmatter via Milkdown nodeView** — not the old markdown-it table card. Uses `remark-frontmatter` for parsing, `$nodeSchema` for ProseMirror node, `$view` for rendering with Shiki-highlighted YAML.
+- **markdown-it pipeline removed** — was dead code (no read-only preview mode exists). ADR-003 retired.
 
 ## Key context
-- Bundle is 470KB gzipped (under 500KB target), 78 tests pass
-- Cleanup task list: `docs/plans/post-mvp-cleanup.md`
+- Bundle is 475KB gzipped (under 500KB target), 23 tests pass
+- Cleanup task list: `docs/plans/post-mvp-cleanup.md` (all 9 tasks complete)
 - Backlog: `docs/plans/backlog.md`

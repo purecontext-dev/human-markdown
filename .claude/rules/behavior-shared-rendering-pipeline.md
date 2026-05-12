@@ -1,7 +1,7 @@
-# Shared Rendering Pipeline (ADR-003)
+# Rendering Architecture (ADR-003 Retired)
 
-Register all rendering plugins in the shared pipeline — do not create mode-specific plugins. Both read-only preview and WYSIWYG edit modes consume the same markdown-it plugins and theme configuration.
+There is no shared markdown-it rendering pipeline. Milkdown handles all WYSIWYG rendering via its own Remark-based pipeline. Code blocks, frontmatter, and mermaid are rendered through Milkdown nodeViews.
 
-Define theme tokens once and consume them in both modes. Use CSS custom properties for all styling — do not use inline styles in the webview.
+Define theme tokens once using CSS custom properties. Do not use inline styles in the webview.
 
-When adding or modifying a rendering plugin, test the change in both preview and edit modes.
+Heavy rendering libraries (Shiki, Mermaid) are loaded as separate IIFE bundles via static `<script>` tags, not inlined into the main webview bundle.

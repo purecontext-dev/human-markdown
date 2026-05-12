@@ -72,7 +72,7 @@ The foundation Milkdown and Tiptap build on. Maximum control, minimum bundle (~3
 
 ## Related Decisions
 
-- ADR-003: Shared rendering pipeline (Milkdown consumes the same plugins and theme)
+- ADR-003: ~~Shared rendering pipeline~~ (Retired — no read-only preview mode exists; Milkdown uses its own Remark rendering)
 
 ---
 
@@ -137,48 +137,12 @@ Renders in VSCode's sidebar or panel areas.
 
 ## Status
 
-Accepted
+Retired
 
-## Context
+## Retirement Note
 
-Human Markdown has two viewing modes: WYSIWYG editing (Milkdown) and read-only preview. Both render the same markdown content with the same theme. The question is whether they share a rendering pipeline or have independent ones.
+There is no read-only preview mode — the extension only has WYSIWYG editing (Milkdown) and raw editing (CodeMirror). The shared markdown-it pipeline was never consumed and has been removed. Milkdown uses its own Remark-based rendering. Theme tokens are still shared via CSS custom properties.
 
-## Decision
+## Original Context
 
-A single rendering pipeline (markdown-it + plugins + theme injection) is shared by both the read-only preview and the Milkdown editor. The pipeline produces HTML for preview mode and feeds the same plugins/theme tokens into Milkdown's ProseMirror rendering for edit mode.
-
-## Alternatives Considered
-
-### Separate Pipelines
-
-Independent rendering for preview (markdown-it) and editing (Milkdown's internal Remark-based rendering).
-
-- **Pros:** Simpler — each mode is self-contained. No coupling between rendering paths.
-- **Cons:** Visual inconsistency between modes. Theme changes need to be applied twice. Plugin behavior may differ between markdown-it and Remark rendering. Maintenance burden of two rendering paths.
-
-## Consequences
-
-### Positive
-
-- Visual consistency: toggling between modes shows identical rendering
-- Single source of truth for theme tokens and plugin configuration
-- Bug fixes and plugin additions apply to both modes automatically
-- The "mode switch" feels like changing interactivity, not changing views
-
-### Negative
-
-- Tighter coupling between preview and editor subsystems
-- Plugin compatibility must be validated for both markdown-it and Milkdown/Remark contexts
-- Theme token format must work for both CSS injection (preview) and ProseMirror styling (editor)
-
-## Enforcement
-
-- All rendering plugins must be registered in the shared pipeline — no mode-specific plugins
-- Theme tokens are defined once and consumed by both modes
-- Any change to the rendering pipeline must be tested in both preview and edit mode
-- No inline styles in the webview — all styling through CSS custom properties from the theme engine
-
-## Related Decisions
-
-- ADR-001: Milkdown consumes the shared pipeline
-- ADR-002: CustomTextEditorProvider hosts the webview where the pipeline runs
+The ADR proposed a shared markdown-it rendering pipeline for both a read-only preview and WYSIWYG editing. The read-only preview was never implemented, making the pipeline dead code.

@@ -11,7 +11,7 @@ Feature branches → PR → merge to main. Branch prefixes: `feat/`, `fix/`, `ch
 
 ## Tech Stack
 
-TypeScript (strict), pnpm, esbuild (dual CJS/ESM), Vitest, Biome, husky + lint-staged. Milkdown (ProseMirror + Remark) for WYSIWYG editing. markdown-it + plugins for rendering. GitHub Actions for CI/CD.
+TypeScript (strict), pnpm, esbuild (dual CJS/ESM), Vitest, Biome, husky + lint-staged. Milkdown (ProseMirror + Remark) for WYSIWYG editing. Shiki for syntax highlighting. GitHub Actions for CI/CD.
 
 ## Key Commands
 
@@ -33,7 +33,7 @@ F5 in VSCode launches the Extension Development Host for testing.
 Two runtime contexts connected by `postMessage`:
 
 - **Extension Host (Node.js):** `CustomTextEditorProvider` manages webview lifecycle and `TextDocument` sync. Configuration manager handles themes and settings.
-- **Webview (Browser):** Milkdown editor for WYSIWYG editing. Shared rendering pipeline (markdown-it + plugins). Theme engine applies CSS custom properties.
+- **Webview (Browser):** Milkdown editor for WYSIWYG editing. Shiki and Mermaid as separate IIFE bundles for code/diagram rendering. Theme engine applies CSS custom properties.
 
 See `docs/spec/` for full planning documents and `docs/adrs/` for architectural decisions.
 
@@ -46,7 +46,7 @@ See `docs/spec/` for full planning documents and `docs/adrs/` for architectural 
 
 ## Testing
 
-Unit tests with Vitest. Focus on rendering pipeline output, round-trip fidelity (markdown → edit → markdown), theme token injection, frontmatter parsing. Adversarial XSS test suite for security validation. No webview integration tests.
+Unit tests with Vitest. Focus on round-trip fidelity (markdown → edit → markdown), theme token injection, bundle size budgets. No webview integration tests.
 
 ## Development Roadmap
 

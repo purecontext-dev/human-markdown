@@ -35,18 +35,31 @@ const mermaidConfig = {
   external: ['fs'],
 }
 
+const shikiConfig = {
+  entryPoints: ['webview/editor/shiki-loader.ts'],
+  bundle: true,
+  outfile: 'dist/shiki.js',
+  format: 'iife',
+  platform: 'browser',
+  target: 'es2022',
+  sourcemap: true,
+  minify: true,
+}
+
 async function build() {
   if (isWatch) {
     const extCtx = await esbuild.context(extensionConfig)
     const webCtx = await esbuild.context(webviewConfig)
     const mermaidCtx = await esbuild.context(mermaidConfig)
-    await Promise.all([extCtx.watch(), webCtx.watch(), mermaidCtx.watch()])
+    const shikiCtx = await esbuild.context(shikiConfig)
+    await Promise.all([extCtx.watch(), webCtx.watch(), mermaidCtx.watch(), shikiCtx.watch()])
     console.log('Watching for changes...')
   } else {
     await Promise.all([
       esbuild.build(extensionConfig),
       esbuild.build(webviewConfig),
       esbuild.build(mermaidConfig),
+      esbuild.build(shikiConfig),
     ])
     console.log('Build complete.')
   }

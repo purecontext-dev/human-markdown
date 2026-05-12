@@ -161,6 +161,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const mermaidUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'mermaid.js'),
     )
+    const shikiUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'shiki.js'),
+    )
     const nonce = getNonce()
 
     const editorConfig = vscode.workspace.getConfiguration('editor')
@@ -181,7 +184,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; font-src ${webview.cspSource};">
+    content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; font-src ${webview.cspSource};">
   <title>Human Markdown</title>
   <style>
     body {
@@ -265,6 +268,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   </div>
   <div id="codemirror-container"></div>
   <script nonce="${nonce}" async src="${mermaidUri}"></script>
+  <script nonce="${nonce}" async src="${shikiUri}"></script>
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
 </html>`
