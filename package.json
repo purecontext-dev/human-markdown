@@ -104,7 +104,7 @@
     "@codemirror/view": "^6.42.1",
     "@lezer/highlight": "^1.2.3",
     "@milkdown/core": "^7.6.0",
-    "@milkdown/ctx": "^7.6.0",
+    "@milkdown/ctx": "^7.21.0",
     "@milkdown/kit": "^7.6.0",
     "@milkdown/plugin-listener": "^7.6.0",
     "@milkdown/preset-commonmark": "^7.6.0",
