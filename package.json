@@ -3,8 +3,8 @@
   "displayName": "Human Markdown",
   "description": "A WYSIWYG markdown editor for VSCode. Read and edit markdown as a human.",
   "version": "0.1.0",
-  "publisher": "purecontext-dev",
-  "license": "MIT",
+  "publisher": "purecontext",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "https://github.com/purecontext-dev/human-markdown"
@@ -12,7 +12,7 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": ["Programming Languages", "Visualization"],
   "activationEvents": ["onLanguage:markdown"],
   "main": "./dist/extension.js",
   "contributes": {
@@ -25,7 +25,7 @@
             "filenamePattern": "*.md"
           }
         ],
-        "priority": "option"
+        "priority": "default"
       }
     ],
     "commands": [
@@ -95,6 +95,13 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.42.1",
+    "@lezer/highlight": "^1.2.3",
     "@milkdown/core": "^7.6.0",
     "@milkdown/ctx": "^7.6.0",
     "@milkdown/kit": "^7.6.0",

@@ -1,3 +1,4 @@
+import type { EditorView } from '@codemirror/view'
 import {
   Editor,
   defaultValueCtx,
@@ -13,6 +14,7 @@ import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
 import { codeBlockView } from './code-block-view'
+import { createCodeMirrorEditor } from './codemirror-editor'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { injectEditorStyles } from './styles'
 
@@ -24,6 +26,7 @@ interface VsCodeApi {
 
 interface WebviewState {
   scrollTop: number
+  mode: 'preview' | 'raw'
 }
 
 declare function acquireVsCodeApi(): VsCodeApi
@@ -32,23 +35,95 @@ type ExtensionMessage =
   | { type: 'update'; content: string }
   | { type: 'restore-state'; state: WebviewState }
   | { type: 'theme'; tokens: ThemeTokens }
+  | { type: 'toggle-mode' }
+  | { type: 'set-mode'; mode: 'preview' | 'raw' }
 
 const vscode = acquireVsCodeApi()
 
-let editor: Editor | null = null
+let milkdownEditor: Editor | null = null
+let cmEditor: EditorView | null = null
 let currentContent = ''
-let suppressUpdate = false
+let suppressMilkdownUpdate = false
+let suppressCmUpdate = false
+let currentMode: 'preview' | 'raw' = 'preview'
+
+const previewContainer = document.getElementById('preview-container') as HTMLElement
+const cmContainer = document.getElementById('codemirror-container') as HTMLElement
+const previewBtn = document.querySelector<HTMLButtonElement>(
+  '.mode-btn[data-mode="preview"]',
+) as HTMLButtonElement
+const rawBtn = document.querySelector<HTMLButtonElement>(
+  '.mode-btn[data-mode="raw"]',
+) as HTMLButtonElement
 
 injectEditorStyles()
 
-async function initEditor(content: string) {
+function setMode(mode: 'preview' | 'raw') {
+  currentMode = mode
+
+  if (mode === 'preview') {
+    previewContainer.classList.remove('hidden')
+    cmContainer.classList.remove('active')
+    previewBtn.classList.add('active')
+    rawBtn.classList.remove('active')
+
+    if (milkdownEditor && cmEditor) {
+      const cmContent = cmEditor.state.doc.toString()
+      if (cmContent !== currentContent) {
+        currentContent = cmContent
+        suppressMilkdownUpdate = true
+        try {
+          milkdownEditor.action(replaceAll(cmContent))
+        } catch {
+          // ignore
+        }
+        suppressMilkdownUpdate = false
+      }
+    }
+  } else {
+    previewContainer.classList.add('hidden')
+    cmContainer.classList.add('active')
+    previewBtn.classList.remove('active')
+    rawBtn.classList.add('active')
+
+    if (!cmEditor) {
+      cmEditor = createCodeMirrorEditor(cmContainer, currentContent, (content) => {
+        if (suppressCmUpdate) return
+        currentContent = content
+        vscode.postMessage({ type: 'edit', content })
+      })
+    } else {
+      const cmContent = cmEditor.state.doc.toString()
+      if (cmContent !== currentContent) {
+        suppressCmUpdate = true
+        cmEditor.dispatch({
+          changes: { from: 0, to: cmContent.length, insert: currentContent },
+        })
+        suppressCmUpdate = false
+      }
+    }
+
+    cmEditor.focus()
+  }
+
+  saveScrollState()
+}
+
+function toggleMode() {
+  setMode(currentMode === 'preview' ? 'raw' : 'preview')
+}
+
+previewBtn.addEventListener('click', () => setMode('preview'))
+rawBtn.addEventListener('click', () => setMode('raw'))
+
+async function initMilkdown(content: string) {
   const root = document.getElementById('editor')
   if (!root) return
 
   currentContent = content
 
   try {
-    editor = await Editor.make()
+    milkdownEditor = await Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root)
         ctx.set(defaultValueCtx, content)
@@ -57,7 +132,7 @@ async function initEditor(content: string) {
           rule: '-',
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
-          if (suppressUpdate) return
+          if (suppressMilkdownUpdate) return
           currentContent = markdown
           vscode.postMessage({ type: 'edit', content: markdown })
         })
@@ -69,27 +144,40 @@ async function initEditor(content: string) {
       .use(keyboardNavPlugin)
       .create()
 
-    editor.action((ctx) => {
+    milkdownEditor.action((ctx) => {
       patchRemarkForTightLists(ctx.get(remarkCtx))
     })
   } catch (err) {
-    editor = null
+    milkdownEditor = null
     renderFallback(root, content, err)
   }
 }
 
 function updateContent(content: string) {
-  if (!editor || content === currentContent) return
-
+  if (content === currentContent) return
   currentContent = content
-  suppressUpdate = true
-  try {
-    editor.action(replaceAll(content))
-  } catch (err) {
-    const root = document.getElementById('editor')
-    if (root) renderFallback(root, content, err)
+
+  if (milkdownEditor) {
+    suppressMilkdownUpdate = true
+    try {
+      milkdownEditor.action(replaceAll(content))
+    } catch (err) {
+      const root = document.getElementById('editor')
+      if (root) renderFallback(root, content, err)
+    }
+    suppressMilkdownUpdate = false
   }
-  suppressUpdate = false
+
+  if (cmEditor) {
+    const cmContent = cmEditor.state.doc.toString()
+    if (cmContent !== content) {
+      suppressCmUpdate = true
+      cmEditor.dispatch({
+        changes: { from: 0, to: cmContent.length, insert: content },
+      })
+      suppressCmUpdate = false
+    }
+  }
 }
 
 function renderFallback(root: HTMLElement, content: string, err: unknown) {
@@ -114,7 +202,7 @@ let scrollTimer: ReturnType<typeof setTimeout> | null = null
 function saveScrollState() {
   if (scrollTimer) clearTimeout(scrollTimer)
   scrollTimer = setTimeout(() => {
-    const state: WebviewState = { scrollTop: document.documentElement.scrollTop }
+    const state: WebviewState = { scrollTop: document.documentElement.scrollTop, mode: currentMode }
     vscode.setState(state)
     vscode.postMessage({ type: 'save-state', state })
   }, 150)
@@ -124,17 +212,26 @@ window.addEventListener('message', (event) => {
   const msg: ExtensionMessage = event.data
   switch (msg.type) {
     case 'update':
-      if (editor) {
+      if (milkdownEditor) {
         updateContent(msg.content)
       } else {
-        initEditor(msg.content)
+        initMilkdown(msg.content)
       }
       break
     case 'restore-state':
       document.documentElement.scrollTop = msg.state.scrollTop
+      if (msg.state.mode) {
+        setMode(msg.state.mode)
+      }
       break
     case 'theme':
       applyTheme(msg.tokens, document.documentElement)
+      break
+    case 'toggle-mode':
+      toggleMode()
+      break
+    case 'set-mode':
+      setMode(msg.mode)
       break
   }
 })

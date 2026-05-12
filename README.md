@@ -1,64 +1,47 @@
 # Human Markdown
 
-A WYSIWYG markdown editor for VSCode. Read and edit markdown as a human — rendered, styled, in-place. Toggle to raw with one keystroke.
+A WYSIWYG markdown editor for VSCode. Open any `.md` file, read it rendered, edit it inline. Toggle to raw with one keystroke.
 
-AI writes the markdown. Human Markdown makes it something you can actually work with.
+AI writes the markdown. Human Markdown makes it something you can actually read and work with.
 
 ## Features
 
-- **WYSIWYG editing** — Edit markdown directly in the rendered view. Full block-type coverage.
-- **Same-tab toggle** — One keystroke (`Cmd+Shift+V`) switches between rendered and raw mode.
-- **Complete rendering** — GFM, syntax highlighting, math, diagrams, frontmatter cards, tables.
-- **Theming** — Light, Dark, and GitHub themes. Custom themes via JSON or Tailwind config.
-- **Stable** — Strict CSP, error boundaries, no crashes.
+**WYSIWYG Editing** — Click into any block and edit directly in the rendered view. Headings, lists, tables, code blocks, blockquotes, images — all editable in place.
 
-## Getting Started
+**One-Keystroke Toggle** — `Cmd+Shift+V` (or `Ctrl+Shift+V`) flips between the rendered editor and raw markdown. Same tab, no context switch.
 
-### Prerequisites
+**Full Markdown Rendering** — GFM tables, task lists, math (KaTeX), diagrams (Mermaid), syntax-highlighted code blocks, frontmatter cards, footnotes.
 
-- [Node.js](https://nodejs.org/) 18+
-- [pnpm](https://pnpm.io/) 9+
-- [VSCode](https://code.visualstudio.com/) 1.85+
+**Built-in Themes** — Light, Dark, and GitHub themes. Auto mode matches your VSCode color scheme. Switch via command palette or settings.
 
-### Install
+**Round-Trip Fidelity** — Your formatting stays intact. Indent style, heading style, list markers, blank lines — preserved through edits.
 
-```bash
-pnpm install
-```
+**Fast** — Opens in under 200ms. Mode toggle under 100ms. Lazy-loads heavy renderers (Mermaid, KaTeX) only when needed.
 
-### Development
+## Usage
 
-```bash
-pnpm dev        # Watch mode
-# Press F5 in VSCode to launch Extension Development Host
-```
+1. Open any `.md` file
+2. Right-click the editor tab → "Reopen Editor With..." → "Human Markdown"
+3. Or set as default: `"workbench.editorAssociations": { "*.md": "humanMarkdown.preview" }`
 
-### Build & Test
+### Commands
 
-```bash
-pnpm build      # Build extension
-pnpm test       # Run tests
-pnpm lint       # Lint + format check
-pnpm typecheck  # Type checking
-pnpm package    # Package as .vsix
-```
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| Human Markdown: Toggle WYSIWYG / Raw | `Cmd+Shift+V` | Switch between rendered and raw |
+| Human Markdown: Select Theme | — | Pick a theme from the palette |
 
-## Project Structure
+### Settings
 
-```
-src/                    # Extension host (Node.js)
-├── providers/          # CustomTextEditorProvider
-├── rendering/          # Shared markdown-it pipeline
-├── themes/             # Built-in theme JSON files
-└── utils/              # Scroll sync, state management
-webview/                # Webview (browser)
-├── editor/             # Milkdown WYSIWYG editor
-├── preview/            # Read-only preview
-└── shared/             # Shared styles, components
-docs/                   # Planning docs and specs
-test/fixtures/          # Test markdown files
-```
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `humanMarkdown.theme` | `auto` | Theme: auto, light, dark, github |
+| `humanMarkdown.defaultMode` | `wysiwyg` | Default mode when opening files |
 
-## License
+## Requirements
 
-MIT
+- VSCode 1.85+
+
+## Feedback & Issues
+
+Found a bug or have a feature request? Email [support@purecontext.dev](mailto:support@purecontext.dev).
