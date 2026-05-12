@@ -5,12 +5,21 @@ import type { Node as ProsemirrorNode } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
 import { observeBlock, unobserveBlock } from './viewport-observer'
 
+interface ShikiHighlighter {
+  codeToHtml(code: string, options: { lang: string; theme: string }): string
+}
+
 interface MermaidApi {
   initialize(config: Record<string, unknown>): void
   render(id: string, source: string): Promise<{ svg: string }>
 }
 
 let mermaidInitialized = false
+
+export function getShikiHighlighter(): Promise<ShikiHighlighter> | null {
+  const ready = (window as unknown as Record<string, unknown>).__shikiReady
+  return ready as Promise<ShikiHighlighter> | null
+}
 
 function getMermaid(): MermaidApi | null {
   return (window as unknown as Record<string, unknown>).__mermaid as MermaidApi | null
@@ -43,7 +52,7 @@ async function renderMermaid(source: string, container: HTMLElement): Promise<vo
   }
 }
 
-function detectTheme(): 'github-light' | 'github-dark' {
+export function detectTheme(): 'github-light' | 'github-dark' {
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--hm-color-bg')
   if (!bg) return 'github-light'
   const trimmed = bg.trim()
@@ -104,7 +113,28 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         renderMermaid(content, rendered)
       } else {
         rendered.innerHTML = `<pre><code>${escapeHtml(content)}</code></pre>`
+        applyShikiHighlighting(content, currentLang, rendered)
       }
+    }
+
+    function applyShikiHighlighting(content: string, lang: string, target: HTMLElement) {
+      if (!lang) return
+      const ready = getShikiHighlighter()
+      if (!ready) return
+      ready.then((hl) => {
+        if (target.closest('.editing')) return
+        const highlighted = hl.codeToHtml(content, {
+          lang,
+          theme: detectTheme(),
+        })
+        const temp = document.createElement('div')
+        temp.innerHTML = highlighted
+        const newPre = temp.querySelector('pre')
+        if (newPre) {
+          target.innerHTML = ''
+          target.appendChild(newPre)
+        }
+      })
     }
 
     if (isMermaid) {

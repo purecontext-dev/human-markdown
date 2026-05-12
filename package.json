@@ -91,6 +91,7 @@
     "husky": "^9.0.0",
     "jsdom": "^29.1.1",
     "lint-staged": "^15.0.0",
+    "remark-frontmatter": "^5.0.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
@@ -109,13 +110,7 @@
     "@milkdown/preset-commonmark": "^7.6.0",
     "@milkdown/preset-gfm": "^7.6.0",
     "@milkdown/prose": "^7.6.0",
-    "gray-matter": "^4.0.0",
     "katex": "^0.16.0",
-    "markdown-it": "^14.0.0",
-    "markdown-it-anchor": "^9.0.0",
-    "markdown-it-container": "^4.0.0",
-    "markdown-it-footnote": "^4.0.0",
-    "markdown-it-task-lists": "^2.1.0",
     "mermaid": "^11.0.0",
     "shiki": "^1.0.0"
   },

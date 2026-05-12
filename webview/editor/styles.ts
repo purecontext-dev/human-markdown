@@ -178,6 +178,113 @@ const editorCSS = `
     white-space: pre-wrap;
   }
 
+  .milkdown .frontmatter-block {
+    position: relative;
+    margin: 0 0 1em;
+    border: 1px solid var(--hm-color-border);
+    border-radius: 6px;
+    background: var(--hm-color-code-bg);
+    overflow: hidden;
+  }
+
+  .milkdown .frontmatter-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.5em 1em;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--hm-color-text-muted);
+    border-bottom: 1px solid var(--hm-color-border);
+  }
+
+  .milkdown .frontmatter-block.collapsed .frontmatter-header {
+    border-bottom: none;
+  }
+
+  .milkdown .frontmatter-toggle {
+    font-size: 0.75em;
+    line-height: 1;
+  }
+
+  .milkdown .frontmatter-body {
+    position: relative;
+  }
+
+  .milkdown .frontmatter-rendered {
+    position: absolute;
+    inset: 0;
+    padding: 1em;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+    color: var(--hm-color-code-text);
+  }
+
+  .milkdown .frontmatter-rendered pre {
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .milkdown .frontmatter-block.editing .frontmatter-rendered {
+    display: none;
+  }
+
+  .milkdown .frontmatter-body > pre {
+    margin: 0;
+    padding: 1em;
+  }
+
+  .milkdown .frontmatter-body > pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.875em;
+    line-height: 1.45;
+  }
+
+  .milkdown li[data-item-type="task"] {
+    list-style: none;
+    position: relative;
+    margin-left: -1.5em;
+    padding-left: 1.5em;
+  }
+
+  .milkdown li[data-item-type="task"]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.25em;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--hm-color-border);
+    border-radius: 3px;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .milkdown li[data-item-type="task"][data-checked="true"]::before {
+    background: var(--hm-color-link);
+    border-color: var(--hm-color-link);
+  }
+
+  .milkdown li[data-item-type="task"][data-checked="true"]::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0.35em;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
   .error-banner {
     background: rgba(244, 135, 113, 0.1);
     border: 1px solid #f48771;

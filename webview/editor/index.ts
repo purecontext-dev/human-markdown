@@ -15,8 +15,15 @@ import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
 import { codeBlockView } from './code-block-view'
 import { createCodeMirrorEditor } from './codemirror-editor'
+import {
+  frontmatterNodeSchema,
+  frontmatterView,
+  initFrontmatterState,
+  remarkFrontmatterPlugin,
+} from './frontmatter-plugin'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { injectEditorStyles } from './styles'
+import { taskListTogglePlugin } from './task-list-toggle'
 
 interface VsCodeApi {
   postMessage(message: unknown): void
@@ -27,6 +34,7 @@ interface VsCodeApi {
 interface WebviewState {
   scrollTop: number
   mode: 'preview' | 'raw'
+  frontmatterCollapsed?: boolean
 }
 
 declare function acquireVsCodeApi(): VsCodeApi
@@ -57,6 +65,12 @@ const rawBtn = document.querySelector<HTMLButtonElement>(
 ) as HTMLButtonElement
 
 injectEditorStyles()
+
+const savedState = vscode.getState()
+initFrontmatterState((isCollapsed) => {
+  const state = vscode.getState() ?? { scrollTop: 0, mode: 'preview' as const }
+  vscode.setState({ ...state, frontmatterCollapsed: isCollapsed })
+}, savedState?.frontmatterCollapsed ?? false)
 
 function setMode(mode: 'preview' | 'raw') {
   currentMode = mode
@@ -116,6 +130,14 @@ function toggleMode() {
 previewBtn.addEventListener('click', () => setMode('preview'))
 rawBtn.addEventListener('click', () => setMode('raw'))
 
+previewContainer.addEventListener('click', (e) => {
+  if (!e.metaKey && !e.ctrlKey) return
+  const anchor = (e.target as HTMLElement).closest('a')
+  if (!anchor?.href) return
+  e.preventDefault()
+  vscode.postMessage({ type: 'open-link', href: anchor.href })
+})
+
 async function initMilkdown(content: string) {
   const root = document.getElementById('editor')
   if (!root) return
@@ -139,9 +161,13 @@ async function initMilkdown(content: string) {
       })
       .use(commonmark)
       .use(gfm)
+      .use(remarkFrontmatterPlugin)
+      .use(frontmatterNodeSchema)
+      .use(frontmatterView)
       .use(listener)
       .use(codeBlockView)
       .use(keyboardNavPlugin)
+      .use(taskListTogglePlugin)
       .create()
 
     milkdownEditor.action((ctx) => {
