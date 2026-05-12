@@ -179,7 +179,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const zoomCompensation = 1.1 ** -zoomLevel
 
     return `<!DOCTYPE html>
-<html lang="en" style="zoom: ${zoomCompensation};">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -229,6 +229,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
     #preview-container {
       padding: 16px 24px;
+      zoom: ${zoomCompensation};
     }
     #editor {
       max-width: var(--hm-max-width, 800px);

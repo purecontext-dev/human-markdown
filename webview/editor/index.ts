@@ -115,6 +115,7 @@ function setMode(mode: 'preview' | 'raw') {
         })
         suppressCmUpdate = false
       }
+      cmEditor.requestMeasure()
     }
 
     cmEditor.focus()
@@ -194,7 +195,7 @@ function updateContent(content: string) {
     suppressMilkdownUpdate = false
   }
 
-  if (cmEditor) {
+  if (cmEditor && currentMode === 'raw') {
     const cmContent = cmEditor.state.doc.toString()
     if (cmContent !== content) {
       suppressCmUpdate = true
