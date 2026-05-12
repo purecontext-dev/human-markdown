@@ -1,0 +1,15 @@
+# Post-MVP Cleanup
+
+Decisions from spec-vs-implementation audit. Each item reviewed and triaged.
+
+## Fixes
+
+- [ ] **CSP missing `img-src`** — Add `img-src ${webview.cspSource} https: data:;` to the CSP meta tag in `editor-provider.ts`. Images are silently broken without this.
+- [ ] **Remove dead copy button** — Strip `copyButtonPlugin` from the rendering pipeline. No click handler was ever wired up and the feature isn't needed. Clean removal.
+- [ ] **Cmd+click to open links in browser** — Intercept Cmd+click (Meta+click) on links in the webview, post a message to the extension host, and call `vscode.env.openExternal(Uri.parse(href))`. Plain click should place the cursor for editing, not navigate.
+- [ ] **Progressive Shiki highlighting in WYSIWYG code blocks** — Wire Shiki into the Milkdown code block nodeView. Render plain monospace immediately, then asynchronously apply Shiki highlighting as grammars load. The Shiki hydrator already exists — connect it to the code block view's rendered (unfocused) state.
+- [ ] **Frontmatter as styled YAML block in WYSIWYG** — Render frontmatter as a Shiki-highlighted YAML code block with a visual treatment (distinct background, "Frontmatter" label) that distinguishes it from regular code blocks. Editable on click (edit raw YAML), re-rendered on click-away. Same nodeView pattern as code blocks. Handles arbitrary YAML complexity (nested objects, arrays) without special-casing types. Include a collapse/expand disclosure triangle on the label — persist collapsed state via `webview.setState`. Remove the partially-built metadata table card approach and the unused type-formatting logic (dates, arrays, booleans as plain strings).
+- [ ] **Fix task list checkboxes** — Task lists render as plain bullet lists instead of checkboxes. Ensure the Milkdown GFM plugin is rendering checkbox inputs, that they're toggleable on click, and that toggling writes back to the TextDocument via the document sync flow. This is a bug.
+- [ ] **Verify tree-shaking effectiveness** — Audit the esbuild output to confirm unused exports from Milkdown/ProseMirror presets aren't ending up in the webview bundle. Check bundle composition (e.g., `esbuild --analyze`) and flag any dead code getting pulled in. Currently 212KB gzipped — confirm nothing is wasted.
+- [ ] **Add dependabot.yml** — No `.github/dependabot.yml` exists. Add one for npm dependency updates.
+- [ ] **Strip dead markdown-it pipeline** — Remove `pipeline.ts`, `hydrate.ts`, and the markdown-it plugin/hydrator infrastructure (`plugins/math.ts`, `plugins/mermaid-fence.ts`, `hydrators/katex.ts`, `hydrators/mermaid.ts`, `hydrators/shiki.ts`). No consumer exists — Milkdown uses its own Remark rendering, and there's no read-only preview mode. Rebuild if/when the export feature is planned. Keep the Shiki, KaTeX, and Mermaid libraries themselves — they'll be wired into Milkdown nodeViews directly. Also retire ADR-003 (shared rendering pipeline) and update `.claude/rules/behavior-shared-rendering-pipeline.md` — the rule no longer reflects the architecture.

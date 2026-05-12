@@ -1,14 +1,14 @@
 # Session Resume Context
 
 ## Status
-MVP shipped. All 7 epics complete and merged. Next work is from the Future Plans backlog (custom-theming, spell-checking, export, search) or Shiki re-integration.
+In-place mode toggle shipped (branch: `feat/in-place-mode-toggle`). PR created, pending merge.
 
 ## Key decisions
-- **XSS test assertions must be DOM-based** — regex matching on rendered HTML gives false positives (escaped content like `&lt;script` contains the keyword but is safe). Parse with DOMParser, check actual elements/attributes.
-- **Viewport-based lazy rendering for mermaid** — IntersectionObserver with 100% rootMargin for render, 200% for dispose. Prevents N mermaid diagrams from all rendering on large doc open.
-- **Frontmatter handles malformed YAML** — try/catch in parseFrontmatter, returns raw content on failure.
+- **CodeMirror fallback chosen over native editor swap** — `vscode.openWith` had unacceptable re-init cost; embedded CodeMirror in the webview instead.
+- **Font-family generic fallback** — VSCode's `editor.fontFamily` doesn't guarantee a generic CSS family. `escapeFontFamily()` appends `monospace` when none is present, preventing serif fallback in the webview sandbox.
+- **Zoom compensation factor is 1.1** — not 1.2. Matches VSCode's actual zoom step per `window.zoomLevel` unit.
 
 ## Key context
-- 78 tests pass (19 rendering, 6 theme, 36 XSS, 15 round-trip, 2 bundle)
-- Webview bundle 212KB gzipped
-- `pnpm audit --audit-level=high` in CI
+- Bundle is 470KB gzipped (under 500KB target), 78 tests pass
+- Cleanup task list: `docs/plans/post-mvp-cleanup.md`
+- Backlog: `docs/plans/backlog.md`

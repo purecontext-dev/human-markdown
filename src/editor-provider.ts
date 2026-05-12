@@ -6,7 +6,7 @@ import { getConfiguredThemeName, resolveThemeTokens } from './theme-resolver'
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'humanMarkdown.preview'
 
-  private readonly savedStates = new Map<string, { scrollTop: number }>()
+  private readonly savedStates = new Map<string, { scrollTop: number; mode: 'preview' | 'raw' }>()
   private readonly webviews = new Set<vscode.Webview>()
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -21,20 +21,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     )
 
     const toggleCommand = vscode.commands.registerCommand('humanMarkdown.toggle', () => {
-      const uri =
-        vscode.window.activeTextEditor?.document.uri ??
-        vscode.window.tabGroups.activeTabGroup.activeTab?.input
-      if (!uri) return
-
-      const resourceUri = uri instanceof vscode.Uri ? uri : (uri as { uri?: vscode.Uri }).uri
-
-      if (!resourceUri) return
-
-      const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab
-      const isCustomEditor = activeTab?.input instanceof vscode.TabInputCustom
-      const targetViewType = isCustomEditor ? 'default' : MarkdownEditorProvider.viewType
-
-      vscode.commands.executeCommand('vscode.openWith', resourceUri, targetViewType)
+      for (const webview of provider.webviews) {
+        provider.postMessage(webview, { type: 'toggle-mode' })
+      }
     })
 
     const selectThemeCommand = vscode.commands.registerCommand(
@@ -88,6 +77,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'dist')],
     }
 
+    const defaultMode = vscode.workspace
+      .getConfiguration('humanMarkdown')
+      .get<string>('defaultMode', 'wysiwyg')
+
     webview.html = this.getHtmlForWebview(webview)
     this.webviews.add(webview)
 
@@ -100,6 +93,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           this.postMessage(webview, {
             type: 'theme',
             tokens: resolveThemeTokens(getConfiguredThemeName()),
+          })
+          this.postMessage(webview, {
+            type: 'set-mode',
+            mode: defaultMode === 'raw' ? 'raw' : 'preview',
           })
           const saved = this.savedStates.get(document.uri.toString())
           if (saved) {
@@ -124,6 +121,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         }
         case 'save-state': {
           this.savedStates.set(document.uri.toString(), msg.state)
+          break
+        }
+        case 'open-link': {
+          vscode.env.openExternal(vscode.Uri.parse(msg.href))
           break
         }
       }
@@ -162,8 +163,20 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     )
     const nonce = getNonce()
 
+    const editorConfig = vscode.workspace.getConfiguration('editor')
+    const fontFamily = editorConfig.get<string>(
+      'fontFamily',
+      'Menlo, Monaco, Courier New, monospace',
+    )
+    const fontSize = editorConfig.get<number>('fontSize', 14)
+    const lineHeightSetting = editorConfig.get<number>('lineHeight', 0)
+    const lineHeight = lineHeightSetting === 0 ? Math.round(fontSize * 1.35) : lineHeightSetting
+
+    const zoomLevel = vscode.workspace.getConfiguration('window').get<number>('zoomLevel', 0)
+    const zoomCompensation = 1.1 ** -zoomLevel
+
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="zoom: ${zoomCompensation};">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -173,9 +186,46 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <style>
     body {
       margin: 0;
-      padding: 16px 24px;
-      background-color: var(--hm-color-bg);
+      padding: 0;
+      background-color: var(--vscode-editor-background, var(--hm-color-bg));
       transition: background-color 0.15s ease;
+    }
+    #toolbar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 4px 16px;
+      border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128,128,128,0.2));
+      background: var(--vscode-editor-background, var(--hm-color-bg));
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .mode-toggle {
+      display: flex;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--vscode-button-border, rgba(128,128,128,0.3));
+    }
+    .mode-btn {
+      padding: 2px 10px;
+      border: none;
+      background: transparent;
+      color: var(--vscode-foreground, #ccc);
+      font-family: var(--vscode-font-family, sans-serif);
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.1s ease, color 0.1s ease;
+    }
+    .mode-btn:hover {
+      background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.15));
+    }
+    .mode-btn.active {
+      background: var(--vscode-button-background, #0078d4);
+      color: var(--vscode-button-foreground, #fff);
+    }
+    #preview-container {
+      padding: 16px 24px;
     }
     #editor {
       max-width: var(--hm-max-width, 800px);
@@ -184,10 +234,36 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     .milkdown .editor {
       outline: none;
     }
+    #codemirror-container {
+      display: none;
+    }
+    #codemirror-container.active {
+      display: block;
+    }
+    #preview-container.hidden {
+      display: none;
+    }
+    .cm-editor {
+      height: calc(100vh - 33px);
+    }
+    .cm-editor .cm-scroller {
+      font-family: ${escapeFontFamily(fontFamily)} !important;
+      font-size: ${fontSize}px !important;
+      line-height: ${lineHeight}px !important;
+    }
   </style>
 </head>
 <body>
-  <div id="editor"></div>
+  <div id="toolbar">
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="preview">Preview</button>
+      <button class="mode-btn" data-mode="raw">Markdown</button>
+    </div>
+  </div>
+  <div id="preview-container">
+    <div id="editor"></div>
+  </div>
+  <div id="codemirror-container"></div>
   <script nonce="${nonce}" async src="${mermaidUri}"></script>
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
@@ -197,4 +273,14 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
 function getNonce(): string {
   return randomBytes(32).toString('hex')
+}
+
+function escapeFontFamily(value: string): string {
+  const families = value.split(',').map((f) => {
+    const trimmed = f.trim().replace(/^['"]|['"]$/g, '')
+    return /\s/.test(trimmed) ? `'${trimmed}'` : trimmed
+  })
+  const generics = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui'])
+  if (!families.some((f) => generics.has(f))) families.push('monospace')
+  return families.join(', ')
 }
