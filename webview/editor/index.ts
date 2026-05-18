@@ -132,13 +132,31 @@ function toggleMode() {
 previewBtn.addEventListener('click', () => setMode('preview'))
 rawBtn.addEventListener('click', () => setMode('raw'))
 
-previewContainer.addEventListener('click', (e) => {
-  if (!e.metaKey && !e.ctrlKey) return
-  const anchor = (e.target as HTMLElement).closest('a')
-  if (!anchor?.href) return
-  e.preventDefault()
-  vscode.postMessage({ type: 'open-link', href: anchor.href })
-})
+previewContainer.addEventListener(
+  'mousedown',
+  (e) => {
+    if (!e.metaKey && !e.ctrlKey) return
+    const anchor = (e.target as HTMLElement).closest('a')
+    if (!anchor?.getAttribute('href')) return
+    e.preventDefault()
+    e.stopPropagation()
+  },
+  true,
+)
+
+previewContainer.addEventListener(
+  'click',
+  (e) => {
+    if (!e.metaKey && !e.ctrlKey) return
+    const anchor = (e.target as HTMLElement).closest('a')
+    const rawHref = anchor?.getAttribute('href')
+    if (!rawHref) return
+    e.preventDefault()
+    e.stopPropagation()
+    vscode.postMessage({ type: 'open-link', href: rawHref })
+  },
+  true,
+)
 
 async function initMilkdown(content: string) {
   const root = document.getElementById('editor')
