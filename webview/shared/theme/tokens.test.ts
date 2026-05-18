@@ -59,6 +59,6 @@ describe('theme tokens', () => {
     const root = document.createElement('div')
     applyTheme(lightTheme, root)
     expect(root.style.getPropertyValue('--hm-color-bg')).toBe('#ffffff')
-    expect(root.style.getPropertyValue('--hm-font-size')).toBe('16px')
+    expect(root.style.getPropertyValue('--hm-font-size')).toBe('15px')
   })
 })

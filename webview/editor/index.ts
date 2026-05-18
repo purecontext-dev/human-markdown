@@ -253,6 +253,7 @@ window.addEventListener('message', (event) => {
       break
     case 'theme':
       applyTheme(msg.tokens, document.documentElement)
+      window.dispatchEvent(new Event('theme-changed'))
       break
     case 'toggle-mode':
       toggleMode()

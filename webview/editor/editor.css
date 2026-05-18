@@ -1,0 +1,81 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--vscode-editor-background, var(--hm-color-bg));
+  transition: background-color 0.15s ease;
+}
+
+#toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 4px 16px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  background: var(--vscode-editor-background, var(--hm-color-bg));
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.mode-toggle {
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--vscode-button-border, rgba(128, 128, 128, 0.3));
+}
+
+.mode-btn {
+  padding: 2px 10px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground, #ccc);
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.mode-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+}
+
+.mode-btn.active {
+  background: var(--vscode-button-background, #0078d4);
+  color: var(--vscode-button-foreground, #fff);
+}
+
+#preview-container {
+  padding: 16px 24px;
+  zoom: var(--hm-zoom-compensation, 1);
+}
+
+#editor {
+  max-width: var(--hm-max-width, 800px);
+  margin: 0 auto;
+}
+
+.milkdown .editor {
+  outline: none;
+}
+
+#codemirror-container {
+  display: none;
+}
+
+#codemirror-container.active {
+  display: block;
+}
+
+#preview-container.hidden {
+  display: none;
+}
+
+.cm-editor {
+  height: calc(100vh - 33px);
+}
+
+.cm-editor .cm-scroller {
+  font-family: var(--hm-cm-font-family) !important;
+  font-size: var(--hm-cm-font-size) !important;
+  line-height: var(--hm-cm-line-height) !important;
+}
