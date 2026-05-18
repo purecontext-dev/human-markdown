@@ -155,6 +155,15 @@ const editorCSS = `
     margin: 0;
     padding: 0;
     background: none;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .milkdown .code-block-view .code-rendered code {
+    background: none;
+    padding: 0;
+    border: none;
   }
 
   .milkdown .code-block-view.editing .code-rendered {
@@ -252,15 +261,20 @@ const editorCSS = `
     inset: 0;
     padding: 1em;
     overflow: hidden;
-    pointer-events: none;
     z-index: 1;
     color: var(--hm-color-code-text);
+    background: var(--hm-color-code-bg);
+    user-select: text;
+    cursor: text;
   }
 
   .milkdown .frontmatter-rendered pre {
     margin: 0;
     padding: 0;
     background: none;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
   }
 
   .milkdown .frontmatter-block.editing .frontmatter-rendered {
@@ -270,11 +284,15 @@ const editorCSS = `
   .milkdown .frontmatter-body > pre {
     margin: 0;
     padding: 1em;
+    border: none;
+    background: none;
   }
 
-  .milkdown .frontmatter-body > pre code {
+  .milkdown .frontmatter-body > pre code,
+  .milkdown .frontmatter-rendered code {
     background: none;
     padding: 0;
+    border: none;
     font-size: 0.875em;
     line-height: 1.3;
   }

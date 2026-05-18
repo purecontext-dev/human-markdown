@@ -1,15 +1,18 @@
 # Session Resume Context
 
 ## Status
-Webview CSS extraction and theme refinement shipped (branch: `refactor/extract-webview-css`). Code block interaction fixes included.
+Frontmatter and code block fixes shipped (branch: `fix/frontmatter-dark-mode-coloring`). Three tasks from the Human Markdown project addressed.
 
 ## Key decisions
-- **CSS extracted to static file** — Inline `<style>` block moved to `webview/editor/editor.css`, copied to `dist/` during build. Dynamic values (zoom compensation, CM font settings) injected as CSS custom properties on `<body>`.
-- **GitHub-refined theme direction** — Light/dark themes aligned to GitHub's Primer palette. Compact spacing (1.4 line-height, 15px base font, 0.35em element margins). Iterated via `mock.html` then ported back.
-- **Shiki re-highlights on theme change** — `theme-changed` event dispatched after `applyTheme()`, code blocks listen and re-render. Shiki's inline background stripped to let CSS theme control.
-- **Code block text selection** — Removed `pointer-events: none` from `.code-rendered` overlay. Click-vs-drag detection: clicks enter editing mode, drags allow text selection.
+- **Code blocks read-only in WYSIWYG** — Rendered Shiki overlay always visible. Text selectable for copying. Editing requires switching to markdown view. Click-to-edit and focusin/focusout editing class management removed.
+- **Frontmatter keeps inline editing** — Click-vs-drag detection on rendered overlay (matching prior code-block pattern). Clicks enter editing mode, drags select text.
+- **Shiki tabindex stripped** — Shiki generates `<pre tabindex="0">` which steals focus from the editing layer, breaking click-to-edit. Both frontmatter and code-block views strip it.
+- **Frontmatter theme-changed listener** — Was missing; code blocks had it. Added with proper cleanup in `destroy()`.
+- **CSS inheritance resets** — Global `.milkdown pre` and `.milkdown code` rules bled border/padding/background into Shiki elements inside rendered overlays. Reset in both code-block and frontmatter CSS.
+- **External edit dirty state** — `syncingContent` flag absorbs Milkdown normalization during init and external updates, preventing spurious `edit` messages that made the document dirty.
 
 ## Key context
 - Bundle is 475KB gzipped (under 500KB target), 23 tests pass
 - `mock.html` at project root for rapid CSS iteration (not shipped in extension)
-- Backlog: `docs/plans/backlog.md`
+- Dead CSS: `.code-block-view.editing` rules are now unreachable (code blocks never enter editing mode). Clean up in follow-up.
+- Tasks tracked in purecontext-tasks project "Human Markdown", not in file-source plans

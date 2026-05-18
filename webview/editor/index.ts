@@ -53,6 +53,7 @@ let cmEditor: EditorView | null = null
 let currentContent = ''
 let suppressMilkdownUpdate = false
 let suppressCmUpdate = false
+let syncingContent = true
 let currentMode: 'preview' | 'raw' = 'preview'
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
@@ -155,8 +156,8 @@ async function initMilkdown(content: string) {
           rule: '-',
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
-          if (suppressMilkdownUpdate) return
           currentContent = markdown
+          if (suppressMilkdownUpdate || syncingContent) return
           vscode.postMessage({ type: 'edit', content: markdown })
         })
       })
@@ -178,6 +179,10 @@ async function initMilkdown(content: string) {
     milkdownEditor = null
     renderFallback(root, content, err)
   }
+
+  requestAnimationFrame(() => {
+    syncingContent = false
+  })
 }
 
 function updateContent(content: string) {
@@ -185,6 +190,7 @@ function updateContent(content: string) {
   currentContent = content
 
   if (milkdownEditor) {
+    syncingContent = true
     suppressMilkdownUpdate = true
     try {
       milkdownEditor.action(replaceAll(content))
@@ -193,6 +199,9 @@ function updateContent(content: string) {
       if (root) renderFallback(root, content, err)
     }
     suppressMilkdownUpdate = false
+    requestAnimationFrame(() => {
+      syncingContent = false
+    })
   }
 
   if (cmEditor && currentMode === 'raw') {

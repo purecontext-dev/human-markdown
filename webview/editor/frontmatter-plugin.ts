@@ -109,6 +109,8 @@ export const frontmatterView = $view(frontmatterNodeSchema.node, () => {
         temp.innerHTML = highlighted
         const newPre = temp.querySelector('pre')
         if (newPre) {
+          newPre.style.background = 'none'
+          newPre.removeAttribute('tabindex')
           rendered.innerHTML = ''
           rendered.appendChild(newPre)
         }
@@ -127,8 +129,26 @@ export const frontmatterView = $view(frontmatterNodeSchema.node, () => {
       syncState?.(collapsed)
     })
 
-    container.addEventListener('focusin', () => {
+    let mouseDownX = 0
+    let mouseDownY = 0
+    rendered.addEventListener('mousedown', (e) => {
+      mouseDownX = e.clientX
+      mouseDownY = e.clientY
+    })
+    rendered.addEventListener('click', (e) => {
+      const dx = e.clientX - mouseDownX
+      const dy = e.clientY - mouseDownY
+      if (Math.sqrt(dx * dx + dy * dy) < 3) {
+        container.classList.add('editing')
+        code.focus()
+      }
+    })
+
+    container.addEventListener('focusin', (e) => {
       container.classList.add('editing')
+      if (e.target !== code && !code.contains(e.target as Node)) {
+        code.focus()
+      }
     })
 
     container.addEventListener('focusout', (e) => {
@@ -137,6 +157,13 @@ export const frontmatterView = $view(frontmatterNodeSchema.node, () => {
       container.classList.remove('editing')
       updateRendered()
     })
+
+    function onThemeChanged() {
+      if (!container.classList.contains('editing')) {
+        updateRendered()
+      }
+    }
+    window.addEventListener('theme-changed', onThemeChanged)
 
     return {
       dom: container,
@@ -153,6 +180,9 @@ export const frontmatterView = $view(frontmatterNodeSchema.node, () => {
         if (rendered.contains(mutation.target)) return true
         if (header.contains(mutation.target)) return true
         return false
+      },
+      destroy() {
+        window.removeEventListener('theme-changed', onThemeChanged)
       },
     }
   }

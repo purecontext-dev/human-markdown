@@ -132,6 +132,7 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         const newPre = temp.querySelector('pre')
         if (newPre) {
           newPre.style.background = 'none'
+          newPre.removeAttribute('tabindex')
           target.innerHTML = ''
           target.appendChild(newPre)
         }
@@ -157,34 +158,6 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
     }
     window.addEventListener('theme-changed', onThemeChanged)
 
-    if (rendered && !isMermaid) {
-      let mouseDownX = 0
-      let mouseDownY = 0
-      rendered.addEventListener('mousedown', (e) => {
-        mouseDownX = e.clientX
-        mouseDownY = e.clientY
-      })
-      rendered.addEventListener('click', (e) => {
-        const dx = e.clientX - mouseDownX
-        const dy = e.clientY - mouseDownY
-        if (Math.sqrt(dx * dx + dy * dy) < 3) {
-          container.classList.add('editing')
-          code.focus()
-        }
-      })
-    }
-
-    container.addEventListener('focusin', () => {
-      container.classList.add('editing')
-    })
-
-    container.addEventListener('focusout', (e) => {
-      const related = (e as FocusEvent).relatedTarget as Node | null
-      if (related && container.contains(related)) return
-      container.classList.remove('editing')
-      updateRendered()
-    })
-
     return {
       dom: container,
       contentDOM: code,
@@ -196,9 +169,7 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
           langLabel.textContent = currentLang
         }
         lastText = updatedNode.textContent
-        if (!container.classList.contains('editing')) {
-          updateRendered(updatedNode.textContent)
-        }
+        updateRendered(updatedNode.textContent)
         return true
       },
       ignoreMutation(mutation: { target: Node; type: string }) {
