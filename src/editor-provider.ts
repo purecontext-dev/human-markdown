@@ -124,7 +124,14 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'open-link': {
-          vscode.env.openExternal(vscode.Uri.parse(msg.href))
+          const href = msg.href
+          if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+            vscode.env.openExternal(vscode.Uri.parse(href))
+          } else if (!href.startsWith('#')) {
+            const docDir = vscode.Uri.joinPath(document.uri, '..')
+            const targetUri = vscode.Uri.joinPath(docDir, href)
+            vscode.commands.executeCommand('vscode.open', targetUri)
+          }
           break
         }
       }
