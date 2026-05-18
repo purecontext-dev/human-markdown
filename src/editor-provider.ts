@@ -158,6 +158,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'index.js'),
     )
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'editor.css'),
+    )
     const mermaidUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'mermaid.js'),
     )
@@ -186,78 +189,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; font-src ${webview.cspSource};">
   <title>Human Markdown</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: var(--vscode-editor-background, var(--hm-color-bg));
-      transition: background-color 0.15s ease;
-    }
-    #toolbar {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding: 4px 16px;
-      border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128,128,128,0.2));
-      background: var(--vscode-editor-background, var(--hm-color-bg));
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .mode-toggle {
-      display: flex;
-      border-radius: 4px;
-      overflow: hidden;
-      border: 1px solid var(--vscode-button-border, rgba(128,128,128,0.3));
-    }
-    .mode-btn {
-      padding: 2px 10px;
-      border: none;
-      background: transparent;
-      color: var(--vscode-foreground, #ccc);
-      font-family: var(--vscode-font-family, sans-serif);
-      font-size: 11px;
-      cursor: pointer;
-      transition: background 0.1s ease, color 0.1s ease;
-    }
-    .mode-btn:hover {
-      background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.15));
-    }
-    .mode-btn.active {
-      background: var(--vscode-button-background, #0078d4);
-      color: var(--vscode-button-foreground, #fff);
-    }
-    #preview-container {
-      padding: 16px 24px;
-      zoom: ${zoomCompensation};
-    }
-    #editor {
-      max-width: var(--hm-max-width, 800px);
-      margin: 0 auto;
-    }
-    .milkdown .editor {
-      outline: none;
-    }
-    #codemirror-container {
-      display: none;
-    }
-    #codemirror-container.active {
-      display: block;
-    }
-    #preview-container.hidden {
-      display: none;
-    }
-    .cm-editor {
-      height: calc(100vh - 33px);
-    }
-    .cm-editor .cm-scroller {
-      font-family: ${escapeFontFamily(fontFamily)} !important;
-      font-size: ${fontSize}px !important;
-      line-height: ${lineHeight}px !important;
-    }
-  </style>
+  <link rel="stylesheet" href="${styleUri}">
 </head>
-<body>
+<body style="--hm-zoom-compensation: ${zoomCompensation}; --hm-cm-font-family: ${escapeFontFamily(fontFamily)}; --hm-cm-font-size: ${fontSize}px; --hm-cm-line-height: ${lineHeight}px;">
   <div id="toolbar">
     <div class="mode-toggle">
       <button class="mode-btn active" data-mode="preview">Preview</button>

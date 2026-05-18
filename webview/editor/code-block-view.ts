@@ -131,6 +131,7 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         temp.innerHTML = highlighted
         const newPre = temp.querySelector('pre')
         if (newPre) {
+          newPre.style.background = 'none'
           target.innerHTML = ''
           target.appendChild(newPre)
         }
@@ -147,6 +148,30 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
       )
     } else {
       updateRendered(node.textContent)
+    }
+
+    function onThemeChanged() {
+      if (!container.classList.contains('editing')) {
+        updateRendered()
+      }
+    }
+    window.addEventListener('theme-changed', onThemeChanged)
+
+    if (rendered && !isMermaid) {
+      let mouseDownX = 0
+      let mouseDownY = 0
+      rendered.addEventListener('mousedown', (e) => {
+        mouseDownX = e.clientX
+        mouseDownY = e.clientY
+      })
+      rendered.addEventListener('click', (e) => {
+        const dx = e.clientX - mouseDownX
+        const dy = e.clientY - mouseDownY
+        if (Math.sqrt(dx * dx + dy * dy) < 3) {
+          container.classList.add('editing')
+          code.focus()
+        }
+      })
     }
 
     container.addEventListener('focusin', () => {
@@ -183,6 +208,7 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         return false
       },
       destroy() {
+        window.removeEventListener('theme-changed', onThemeChanged)
         if (isMermaid) unobserveBlock(container)
       },
     }

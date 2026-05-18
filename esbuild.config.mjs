@@ -1,3 +1,4 @@
+import { copyFileSync, mkdirSync } from 'node:fs'
 import * as esbuild from 'esbuild'
 
 const isWatch = process.argv.includes('--watch')
@@ -46,15 +47,22 @@ const shikiConfig = {
   minify: true,
 }
 
+function copyStaticAssets() {
+  mkdirSync('dist/webview', { recursive: true })
+  copyFileSync('webview/editor/editor.css', 'dist/webview/editor.css')
+}
+
 async function build() {
   if (isWatch) {
     const extCtx = await esbuild.context(extensionConfig)
     const webCtx = await esbuild.context(webviewConfig)
     const mermaidCtx = await esbuild.context(mermaidConfig)
     const shikiCtx = await esbuild.context(shikiConfig)
+    copyStaticAssets()
     await Promise.all([extCtx.watch(), webCtx.watch(), mermaidCtx.watch(), shikiCtx.watch()])
     console.log('Watching for changes...')
   } else {
+    copyStaticAssets()
     await Promise.all([
       esbuild.build(extensionConfig),
       esbuild.build(webviewConfig),
