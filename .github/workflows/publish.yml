@@ -24,7 +24,7 @@ jobs:
       - run: pnpm test
       - run: pnpm package
       - name: Publish to VS Code Marketplace
-        run: pnpm publish
+        run: npx vsce publish --no-dependencies -p $VSCE_PAT
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
       - name: Publish to Open VSX (Cursor)
