@@ -18,6 +18,7 @@ function renderMathToHtml(expression: string, displayMode: boolean): string {
     return katex.renderToString(expression, {
       displayMode,
       throwOnError: false,
+      strict: true,
       output: 'mathml',
     })
   } catch {
@@ -57,6 +58,15 @@ export const mathDisplayView = $view(mathDisplaySchema.node, () => {
     }
 
     updateRendered(node.textContent)
+
+    function onKatexReady() {
+      if (!container.classList.contains('editing')) {
+        updateRendered()
+      }
+    }
+    if (!getKatex()) {
+      window.addEventListener('katex-ready', onKatexReady, { once: true })
+    }
 
     let mouseDownX = 0
     let mouseDownY = 0
@@ -102,6 +112,9 @@ export const mathDisplayView = $view(mathDisplaySchema.node, () => {
         if (rendered.contains(mutation.target)) return true
         return false
       },
+      destroy() {
+        window.removeEventListener('katex-ready', onKatexReady)
+      },
     }
   }
 })
@@ -117,6 +130,15 @@ export const mathInlineView = $view(mathInlineSchema.node, () => {
       span.innerHTML = html
     } else {
       span.textContent = `$${value}$`
+    }
+
+    function onKatexReady() {
+      const v = node.attrs.value as string
+      const h = renderMathToHtml(v, false)
+      if (h) span.innerHTML = h
+    }
+    if (!getKatex()) {
+      window.addEventListener('katex-ready', onKatexReady, { once: true })
     }
 
     return {
