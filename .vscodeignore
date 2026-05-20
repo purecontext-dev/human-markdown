@@ -17,3 +17,8 @@ vitest.config.ts
 esbuild.config.mjs
 pnpm-lock.yaml
 CLAUDE.md
+mock.html
+hand-drawn-border*.svg
+*.vsix
+.DS_Store
+.mcp.json

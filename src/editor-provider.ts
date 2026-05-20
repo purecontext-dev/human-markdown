@@ -174,6 +174,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const shikiUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'shiki.js'),
     )
+    const katexUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'katex.js'),
+    )
     const nonce = getNonce()
 
     const editorConfig = vscode.workspace.getConfiguration('editor')
@@ -211,6 +214,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <div id="codemirror-container"></div>
   <script nonce="${nonce}" async src="${mermaidUri}"></script>
   <script nonce="${nonce}" async src="${shikiUri}"></script>
+  <script nonce="${nonce}" async src="${katexUri}"></script>
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
 </html>`

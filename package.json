@@ -4,7 +4,9 @@
   "description": "A WYSIWYG markdown editor for VSCode. Read and edit markdown as a human.",
   "version": "0.1.0",
   "publisher": "purecontext",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": ["markdown", "wysiwyg", "editor", "preview", "katex", "mermaid"],
   "repository": {
     "type": "git",
     "url": "https://github.com/purecontext-dev/human-markdown"
@@ -13,7 +15,11 @@
     "vscode": "^1.85.0"
   },
   "categories": ["Programming Languages", "Visualization"],
-  "activationEvents": ["onLanguage:markdown"],
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onCommand:humanMarkdown.toggle",
+    "onCommand:humanMarkdown.selectTheme"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
@@ -92,6 +98,7 @@
     "jsdom": "^29.1.1",
     "lint-staged": "^15.0.0",
     "remark-frontmatter": "^5.0.0",
+    "remark-math": "^6.0.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
@@ -111,7 +118,7 @@
     "@milkdown/preset-gfm": "^7.6.0",
     "@milkdown/prose": "^7.6.0",
     "katex": "^0.16.0",
-    "mermaid": "^11.0.0",
+    "mermaid": "^11.15.0",
     "shiki": "^1.0.0"
   },
   "pnpm": {
