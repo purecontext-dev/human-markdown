@@ -27,7 +27,11 @@ jobs:
         run: npx vsce publish --no-dependencies -p $VSCE_PAT
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Create Open VSX namespace (no-op if exists)
+        run: npx ovsx create-namespace purecontext -p $OVSX_PAT || true
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
       - name: Publish to Open VSX (Cursor)
-        run: npx ovsx publish human-markdown-*.vsix
+        run: npx ovsx publish human-markdown-*.vsix -p $OVSX_PAT
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
