@@ -23,7 +23,11 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm package
-      - name: Publish to Marketplace
+      - name: Publish to VS Code Marketplace
         run: pnpm publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish to Open VSX (Cursor)
+        run: npx ovsx publish human-markdown-*.vsix
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
