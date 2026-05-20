@@ -22,6 +22,8 @@ import {
   remarkFrontmatterPlugin,
 } from './frontmatter-plugin'
 import { keyboardNavPlugin } from './keyboard-nav'
+import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
+import { mathDisplayView, mathInlineView } from './math-view'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
 
@@ -184,6 +186,11 @@ async function initMilkdown(content: string) {
       .use(remarkFrontmatterPlugin)
       .use(frontmatterNodeSchema)
       .use(frontmatterView)
+      .use(remarkMathPlugin)
+      .use(mathDisplaySchema)
+      .use(mathInlineSchema)
+      .use(mathDisplayView)
+      .use(mathInlineView)
       .use(listener)
       .use(codeBlockView)
       .use(keyboardNavPlugin)

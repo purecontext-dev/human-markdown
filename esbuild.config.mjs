@@ -47,6 +47,17 @@ const shikiConfig = {
   minify: true,
 }
 
+const katexConfig = {
+  entryPoints: ['webview/editor/katex-loader.ts'],
+  bundle: true,
+  outfile: 'dist/katex.js',
+  format: 'iife',
+  platform: 'browser',
+  target: 'es2022',
+  sourcemap: true,
+  minify: true,
+}
+
 function copyStaticAssets() {
   mkdirSync('dist/webview', { recursive: true })
   copyFileSync('webview/editor/editor.css', 'dist/webview/editor.css')
@@ -58,8 +69,15 @@ async function build() {
     const webCtx = await esbuild.context(webviewConfig)
     const mermaidCtx = await esbuild.context(mermaidConfig)
     const shikiCtx = await esbuild.context(shikiConfig)
+    const katexCtx = await esbuild.context(katexConfig)
     copyStaticAssets()
-    await Promise.all([extCtx.watch(), webCtx.watch(), mermaidCtx.watch(), shikiCtx.watch()])
+    await Promise.all([
+      extCtx.watch(),
+      webCtx.watch(),
+      mermaidCtx.watch(),
+      shikiCtx.watch(),
+      katexCtx.watch(),
+    ])
     console.log('Watching for changes...')
   } else {
     copyStaticAssets()
@@ -68,6 +86,7 @@ async function build() {
       esbuild.build(webviewConfig),
       esbuild.build(mermaidConfig),
       esbuild.build(shikiConfig),
+      esbuild.build(katexConfig),
     ])
     console.log('Build complete.')
   }

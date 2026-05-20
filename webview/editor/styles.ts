@@ -166,10 +166,6 @@ const editorCSS = `
     border: none;
   }
 
-  .milkdown .code-block-view.editing .code-rendered {
-    display: none;
-  }
-
   .milkdown .code-block-view .code-lang {
     position: absolute;
     top: 0.5em;
@@ -189,7 +185,7 @@ const editorCSS = `
     margin: 0;
   }
 
-  .milkdown .code-block-view.is-mermaid:not(.editing) pre {
+  .milkdown .code-block-view.is-mermaid pre {
     display: none;
   }
 
@@ -205,10 +201,6 @@ const editorCSS = `
   .milkdown .code-block-view .mermaid-rendered svg {
     max-width: 100%;
     height: auto;
-  }
-
-  .milkdown .code-block-view.editing .mermaid-rendered {
-    display: none;
   }
 
   .milkdown .code-block-view .mermaid-error {
@@ -352,5 +344,52 @@ const editorCSS = `
     white-space: pre-wrap;
     word-wrap: break-word;
     color: var(--hm-color-text);
+  }
+
+  .milkdown .math-display-view {
+    position: relative;
+    margin: 0 0 0.35em;
+  }
+
+  .milkdown .math-display-view .math-rendered {
+    position: absolute;
+    inset: 0;
+    padding: 1em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    cursor: text;
+    user-select: text;
+    color: var(--hm-color-text);
+    font-size: 1.2em;
+    background: var(--hm-color-bg);
+    border: 1px solid var(--hm-color-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .milkdown .math-display-view.editing .math-rendered {
+    display: none;
+  }
+
+  .milkdown .math-display-view pre {
+    margin: 0;
+    padding: 1em;
+    background: var(--hm-color-code-bg);
+    border: 1px solid var(--hm-color-border);
+    border-radius: 6px;
+  }
+
+  .milkdown .math-display-view pre code {
+    background: none;
+    padding: 0;
+    border: none;
+    font-size: 0.875em;
+    line-height: 1.3;
+  }
+
+  .milkdown .math-inline-view {
+    cursor: default;
   }
 `

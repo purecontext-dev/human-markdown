@@ -27,4 +27,15 @@ describe('bundle size', () => {
     )
     expect(sizeKB).toBeLessThan(50)
   })
+
+  it('katex bundle is under 150KB gzipped', () => {
+    const source = readFileSync(join(distDir, 'katex.js'))
+    const gzipped = gzipSync(source)
+    const sizeKB = gzipped.length / 1024
+
+    console.log(
+      `KaTeX bundle: ${(source.length / 1024).toFixed(0)}KB raw, ${sizeKB.toFixed(0)}KB gzipped`,
+    )
+    expect(sizeKB).toBeLessThan(150)
+  })
 })

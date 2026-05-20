@@ -14,6 +14,7 @@ import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { describe, expect, it } from 'vitest'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
+import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 
 const fixturesDir = join(__dirname, '__fixtures__')
 
@@ -43,6 +44,9 @@ async function roundTrip(markdown: string): Promise<string> {
     })
     .use(commonmark)
     .use(gfm)
+    .use(remarkMathPlugin)
+    .use(mathDisplaySchema)
+    .use(mathInlineSchema)
     .create()
 
   editor.action((ctx) => {
@@ -68,7 +72,7 @@ describe('round-trip fidelity', () => {
     expect(fixtures.length).toBeGreaterThanOrEqual(5)
   })
 
-  const exactFixtures = ['basic-formatting', 'code-blocks', 'lists', 'mixed-content']
+  const exactFixtures = ['basic-formatting', 'code-blocks', 'lists', 'mixed-content', 'math']
   const driftFixtures = ['gfm-features', 'tables']
 
   describe('exact preservation', () => {
