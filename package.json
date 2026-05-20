@@ -2,7 +2,7 @@
   "name": "human-markdown",
   "displayName": "Human Markdown",
   "description": "A WYSIWYG markdown editor for VSCode. Read and edit markdown as a human.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "purecontext",
   "license": "MIT",
   "icon": "icon.png",
