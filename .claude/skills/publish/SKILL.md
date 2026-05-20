@@ -24,12 +24,25 @@ Publish a new release of Human Markdown to both the VS Code Marketplace and the 
 
 4. **Bump the version** — edit the `version` field in `package.json`. Do not use `npm version` (it creates its own commit and tag with the wrong format).
 
-5. **Commit** — stage `package.json` and commit: `chore: bump version to <new-version>`
+5. **Create a release branch and PR** — main has branch protection, so direct pushes are blocked.
+   - Create branch `chore/release-<new-version>`
+   - Commit with message: `chore: bump version to <new-version>`
+   - Push the branch and open a PR
+   - Tell the user to merge the PR, then wait
 
-6. **Tag** — `git tag v<new-version>`
+6. **After the PR merges** — reset to main, then tag and push:
+   - `git checkout main && git pull`
+   - `git tag v<new-version>`
+   - `git push origin v<new-version>`
 
-7. **Push** — push the commit and tag to origin. The publish workflow (`.github/workflows/publish.yml`) runs automatically on `v*` tag push and publishes to:
+   The publish workflow (`.github/workflows/publish.yml`) runs automatically on `v*` tag push and publishes to:
    - **VS Code Marketplace** via `vsce` (uses `VSCE_PAT` secret)
    - **Open VSX / Cursor** via `ovsx` (uses `OVSX_PAT` secret)
 
-8. **Link the Actions run** — use `gh run list` to find the triggered workflow run and give the user a link to monitor it.
+7. **Link the Actions run** — use `gh run list` to find the triggered workflow run and give the user a link to monitor it.
+
+## Important
+
+- Always confirm the version number with the user before committing.
+- The actual publishing happens in CI (.github/workflows/publish.yml), not locally.
+- Clean up the release branch after merge (`git branch -d chore/release-<version>`).
