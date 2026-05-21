@@ -15,6 +15,7 @@ import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
 import { codeBlockView } from './code-block-view'
 import { CmSearchBackend, createCodeMirrorEditor } from './codemirror-editor'
+import { ConflictBar } from './conflict-bar'
 import { DomSearchBackend, FindBar } from './find-bar'
 import {
   frontmatterNodeSchema,
@@ -44,6 +45,7 @@ declare function acquireVsCodeApi(): VsCodeApi
 
 type ExtensionMessage =
   | { type: 'update'; content: string }
+  | { type: 'external-change'; content: string }
   | { type: 'restore-state'; state: WebviewState }
   | { type: 'theme'; tokens: ThemeTokens }
   | { type: 'toggle-mode' }
@@ -59,6 +61,7 @@ let suppressMilkdownUpdate = false
 let suppressCmUpdate = false
 let syncingContent = true
 let currentMode: 'preview' | 'raw' = 'preview'
+let webviewDirty = false
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -75,6 +78,24 @@ const cmBackend = new CmSearchBackend(() => cmEditor)
 const findBar = new FindBar(document.body, () => {
   return currentMode === 'preview' ? domBackend : cmBackend
 })
+
+function setDirty(dirty: boolean) {
+  if (dirty === webviewDirty) return
+  webviewDirty = dirty
+  vscode.postMessage({ type: 'dirty-state', isDirty: dirty })
+}
+
+const conflictBar = new ConflictBar(
+  document.body,
+  () => {
+    setDirty(false)
+    vscode.postMessage({ type: 'accept-external' })
+  },
+  () => {
+    vscode.postMessage({ type: 'keep-mine', content: currentContent })
+    setDirty(false)
+  },
+)
 
 injectEditorStyles()
 
@@ -116,6 +137,7 @@ function setMode(mode: 'preview' | 'raw') {
       cmEditor = createCodeMirrorEditor(cmContainer, currentContent, (content) => {
         if (suppressCmUpdate) return
         currentContent = content
+        setDirty(true)
         vscode.postMessage({ type: 'edit', content })
       })
     } else {
@@ -188,6 +210,7 @@ async function initMilkdown(content: string) {
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
           currentContent = markdown
           if (suppressMilkdownUpdate || syncingContent) return
+          setDirty(true)
           vscode.postMessage({ type: 'edit', content: markdown })
         })
       })
@@ -228,7 +251,7 @@ function updateContent(content: string) {
     syncingContent = true
     suppressMilkdownUpdate = true
     try {
-      milkdownEditor.action(replaceAll(content))
+      milkdownEditor.action(replaceAll(content, true))
     } catch (err) {
       const root = document.getElementById('editor')
       if (root) renderFallback(root, content, err)
@@ -239,7 +262,7 @@ function updateContent(content: string) {
     })
   }
 
-  if (cmEditor && currentMode === 'raw') {
+  if (cmEditor) {
     const cmContent = cmEditor.state.doc.toString()
     if (cmContent !== content) {
       suppressCmUpdate = true
@@ -250,6 +273,8 @@ function updateContent(content: string) {
     }
   }
 
+  setDirty(false)
+  conflictBar.hide()
   findBar.refresh()
 }
 
@@ -291,6 +316,9 @@ window.addEventListener('message', (event) => {
         initMilkdown(msg.content)
       }
       break
+    case 'external-change':
+      conflictBar.show()
+      break
     case 'restore-state':
       document.documentElement.scrollTop = msg.state.scrollTop
       if (msg.state.mode) {
@@ -328,6 +356,8 @@ document.addEventListener(
       else findBar.next()
     } else if (e.key === 's') {
       e.preventDefault()
+      setDirty(false)
+      conflictBar.hide()
       vscode.postMessage({ type: 'save' })
     }
   },

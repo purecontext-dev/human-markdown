@@ -92,6 +92,22 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     this.webviews.add(webview)
 
     let suppressNextSync = false
+    let webviewIsDirty = false
+
+    const applyWebviewEdit = (content: string) => {
+      if (content === document.getText()) return
+      suppressNextSync = true
+      const edit = new vscode.WorkspaceEdit()
+      const fullRange = new vscode.Range(
+        document.positionAt(0),
+        document.positionAt(document.getText().length),
+      )
+      edit.replace(document.uri, fullRange, content)
+      const reset = () => {
+        suppressNextSync = false
+      }
+      vscode.workspace.applyEdit(edit).then(reset, reset)
+    }
 
     const onMessage = webview.onDidReceiveMessage((msg: WebviewToExtensionMessage) => {
       switch (msg.type) {
@@ -112,18 +128,39 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'edit': {
-          if (msg.content === document.getText()) return
-          suppressNextSync = true
-          const edit = new vscode.WorkspaceEdit()
-          const fullRange = new vscode.Range(
-            document.positionAt(0),
-            document.positionAt(document.getText().length),
-          )
-          edit.replace(document.uri, fullRange, msg.content)
-          const reset = () => {
-            suppressNextSync = false
-          }
-          vscode.workspace.applyEdit(edit).then(reset, reset)
+          applyWebviewEdit(msg.content)
+          break
+        }
+        case 'dirty-state': {
+          webviewIsDirty = msg.isDirty
+          break
+        }
+        case 'accept-external': {
+          webviewIsDirty = false
+          vscode.workspace.fs.readFile(document.uri).then((bytes) => {
+            const diskContent = new TextDecoder().decode(bytes)
+            suppressNextSync = true
+            const edit = new vscode.WorkspaceEdit()
+            const fullRange = new vscode.Range(
+              document.positionAt(0),
+              document.positionAt(document.getText().length),
+            )
+            edit.replace(document.uri, fullRange, diskContent)
+            vscode.workspace.applyEdit(edit).then(
+              () => {
+                suppressNextSync = false
+                this.postMessage(webview, { type: 'update', content: diskContent })
+              },
+              () => {
+                suppressNextSync = false
+              },
+            )
+          })
+          break
+        }
+        case 'keep-mine': {
+          webviewIsDirty = false
+          applyWebviewEdit(msg.content)
           break
         }
         case 'save-state': {
@@ -151,13 +188,32 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const onDocChange = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return
       if (suppressNextSync) return
-      this.postMessage(webview, { type: 'update', content: document.getText() })
+      if (webviewIsDirty) {
+        this.postMessage(webview, { type: 'external-change', content: document.getText() })
+      } else {
+        this.postMessage(webview, { type: 'update', content: document.getText() })
+      }
+    })
+
+    const fileWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(document.uri, '*'),
+    )
+    const onFileChange = fileWatcher.onDidChange(async (uri) => {
+      if (uri.toString() !== document.uri.toString()) return
+      if (!webviewIsDirty) return
+      const diskBytes = await vscode.workspace.fs.readFile(document.uri)
+      const diskContent = new TextDecoder().decode(diskBytes)
+      if (diskContent !== document.getText()) {
+        this.postMessage(webview, { type: 'external-change', content: diskContent })
+      }
     })
 
     webviewPanel.onDidDispose(() => {
       this.webviews.delete(webview)
       onMessage.dispose()
       onDocChange.dispose()
+      onFileChange.dispose()
+      fileWatcher.dispose()
     })
   }
 

@@ -153,6 +153,60 @@ body {
   margin-left: 2px;
 }
 
+/* Conflict bar */
+.conflict-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: var(--vscode-editorWidget-background, #252526);
+  border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+  font-size: 13px;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  color: var(--vscode-editorWidget-foreground, #cccccc);
+}
+
+.conflict-bar.hidden {
+  display: none;
+}
+
+.conflict-icon {
+  color: var(--vscode-notificationsWarningIcon-foreground, #cca700);
+  font-size: 14px;
+}
+
+.conflict-message {
+  flex: 1;
+}
+
+.conflict-btn {
+  padding: 2px 10px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.conflict-btn.accept {
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+}
+
+.conflict-btn.accept:hover {
+  background: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+.conflict-btn.keep {
+  background: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #cccccc);
+}
+
+.conflict-btn.keep:hover {
+  background: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
 ::highlight(hm-search-results) {
   background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
 }
