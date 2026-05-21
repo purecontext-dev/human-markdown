@@ -45,7 +45,7 @@ const editorCSS = `
   .milkdown h4 { font-size: 1em; }
 
   .milkdown p {
-    margin: 0 0 0.35em;
+    margin: 0 0 1em;
   }
 
   .milkdown strong {
