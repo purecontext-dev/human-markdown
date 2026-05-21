@@ -19,6 +19,21 @@ export interface ThemeTokens {
   '--hm-color-table-header-bg': string
   '--hm-color-frontmatter-bg': string
   '--hm-color-frontmatter-border': string
+  '--hm-color-alert-note-border': string
+  '--hm-color-alert-note-bg': string
+  '--hm-color-alert-note-icon': string
+  '--hm-color-alert-tip-border': string
+  '--hm-color-alert-tip-bg': string
+  '--hm-color-alert-tip-icon': string
+  '--hm-color-alert-important-border': string
+  '--hm-color-alert-important-bg': string
+  '--hm-color-alert-important-icon': string
+  '--hm-color-alert-warning-border': string
+  '--hm-color-alert-warning-bg': string
+  '--hm-color-alert-warning-icon': string
+  '--hm-color-alert-caution-border': string
+  '--hm-color-alert-caution-bg': string
+  '--hm-color-alert-caution-icon': string
 }
 
 export type ThemeName = 'auto' | 'light' | 'dark' | 'github'
@@ -46,6 +61,21 @@ export const lightTheme: ThemeTokens = {
   '--hm-color-table-header-bg': '#f6f8fa',
   '--hm-color-frontmatter-bg': '#f6f8fa',
   '--hm-color-frontmatter-border': '#d1d9e0',
+  '--hm-color-alert-note-border': '#0969da',
+  '--hm-color-alert-note-bg': 'rgba(9, 105, 218, 0.08)',
+  '--hm-color-alert-note-icon': '#0969da',
+  '--hm-color-alert-tip-border': '#1a7f37',
+  '--hm-color-alert-tip-bg': 'rgba(26, 127, 55, 0.08)',
+  '--hm-color-alert-tip-icon': '#1a7f37',
+  '--hm-color-alert-important-border': '#8250df',
+  '--hm-color-alert-important-bg': 'rgba(130, 80, 223, 0.08)',
+  '--hm-color-alert-important-icon': '#8250df',
+  '--hm-color-alert-warning-border': '#9a6700',
+  '--hm-color-alert-warning-bg': 'rgba(154, 103, 0, 0.08)',
+  '--hm-color-alert-warning-icon': '#9a6700',
+  '--hm-color-alert-caution-border': '#cf222e',
+  '--hm-color-alert-caution-bg': 'rgba(207, 34, 46, 0.08)',
+  '--hm-color-alert-caution-icon': '#cf222e',
 }
 
 export const darkTheme: ThemeTokens = {
@@ -71,6 +101,21 @@ export const darkTheme: ThemeTokens = {
   '--hm-color-table-header-bg': '#161b22',
   '--hm-color-frontmatter-bg': '#161b22',
   '--hm-color-frontmatter-border': '#30363d',
+  '--hm-color-alert-note-border': '#58a6ff',
+  '--hm-color-alert-note-bg': 'rgba(88, 166, 255, 0.1)',
+  '--hm-color-alert-note-icon': '#58a6ff',
+  '--hm-color-alert-tip-border': '#3fb950',
+  '--hm-color-alert-tip-bg': 'rgba(63, 185, 80, 0.1)',
+  '--hm-color-alert-tip-icon': '#3fb950',
+  '--hm-color-alert-important-border': '#a371f7',
+  '--hm-color-alert-important-bg': 'rgba(163, 113, 247, 0.1)',
+  '--hm-color-alert-important-icon': '#a371f7',
+  '--hm-color-alert-warning-border': '#d29922',
+  '--hm-color-alert-warning-bg': 'rgba(210, 153, 34, 0.1)',
+  '--hm-color-alert-warning-icon': '#d29922',
+  '--hm-color-alert-caution-border': '#f85149',
+  '--hm-color-alert-caution-bg': 'rgba(248, 81, 73, 0.1)',
+  '--hm-color-alert-caution-icon': '#f85149',
 }
 
 export const githubTheme: ThemeTokens = {
@@ -96,6 +141,21 @@ export const githubTheme: ThemeTokens = {
   '--hm-color-table-header-bg': '#f6f8fa',
   '--hm-color-frontmatter-bg': '#f6f8fa',
   '--hm-color-frontmatter-border': '#d0d7de',
+  '--hm-color-alert-note-border': '#0969da',
+  '--hm-color-alert-note-bg': 'rgba(9, 105, 218, 0.08)',
+  '--hm-color-alert-note-icon': '#0969da',
+  '--hm-color-alert-tip-border': '#1a7f37',
+  '--hm-color-alert-tip-bg': 'rgba(26, 127, 55, 0.08)',
+  '--hm-color-alert-tip-icon': '#1a7f37',
+  '--hm-color-alert-important-border': '#8250df',
+  '--hm-color-alert-important-bg': 'rgba(130, 80, 223, 0.08)',
+  '--hm-color-alert-important-icon': '#8250df',
+  '--hm-color-alert-warning-border': '#9a6700',
+  '--hm-color-alert-warning-bg': 'rgba(154, 103, 0, 0.08)',
+  '--hm-color-alert-warning-icon': '#9a6700',
+  '--hm-color-alert-caution-border': '#cf222e',
+  '--hm-color-alert-caution-bg': 'rgba(207, 34, 46, 0.08)',
+  '--hm-color-alert-caution-icon': '#cf222e',
 }
 
 export const themes: Record<Exclude<ThemeName, 'auto'>, ThemeTokens> = {

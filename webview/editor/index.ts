@@ -23,6 +23,12 @@ import {
   initFrontmatterState,
   remarkFrontmatterPlugin,
 } from './frontmatter-plugin'
+import {
+  githubAlertSchema,
+  githubAlertView,
+  patchRemarkForGithubAlerts,
+  remarkGithubAlertsPlugin,
+} from './github-alert-plugin'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
@@ -219,6 +225,9 @@ async function initMilkdown(content: string) {
       .use(remarkFrontmatterPlugin)
       .use(frontmatterNodeSchema)
       .use(frontmatterView)
+      .use(remarkGithubAlertsPlugin)
+      .use(githubAlertSchema)
+      .use(githubAlertView)
       .use(remarkMathPlugin)
       .use(mathDisplaySchema)
       .use(mathInlineSchema)
@@ -231,7 +240,9 @@ async function initMilkdown(content: string) {
       .create()
 
     milkdownEditor.action((ctx) => {
-      patchRemarkForTightLists(ctx.get(remarkCtx))
+      const remark = ctx.get(remarkCtx)
+      patchRemarkForTightLists(remark)
+      patchRemarkForGithubAlerts(remark)
     })
   } catch (err) {
     milkdownEditor = null

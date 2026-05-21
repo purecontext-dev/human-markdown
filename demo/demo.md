@@ -158,3 +158,32 @@ The generation layer is the most experimental part of the stack. We're currently
 ## Next Steps
 
 Ship the reranker integration this week, then run a full eval pass. If MRR improves to 0.40+, we greenlight the internal alpha. Target launch: **June 15**.
+
+## GitHub Alerts
+
+> [!NOTE]
+> Useful information that users should know, even when skimming content.
+
+> [!TIP]
+> Helpful advice for doing things better or more easily.
+
+> [!IMPORTANT]
+> Key information users need to know to achieve their goal.
+
+> [!WARNING]
+> Urgent info that needs immediate user attention to avoid problems.
+
+> [!CAUTION]
+> Advises about risks or negative outcomes of certain actions.
+
+> Regular blockquote that should not be treated as an alert.
+
+> [!NOTE]
+> Alert with **bold**, *italic*, `code`, and [links](https://example.com).
+
+> [!TIP]
+> Alert with a list inside:
+>
+> - Item one
+> - Item two
+> - Item three

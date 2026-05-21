@@ -392,4 +392,65 @@ const editorCSS = `
   .milkdown .math-inline-view {
     cursor: default;
   }
+
+  .milkdown .github-alert {
+    margin: 0 0 0.35em;
+    padding: 0.75em 1em;
+    border-left: 4px solid var(--hm-color-alert-note-border);
+    border-radius: 6px;
+    background: var(--hm-color-alert-note-bg);
+  }
+
+  .milkdown .github-alert[data-alert-type="tip"] {
+    border-left-color: var(--hm-color-alert-tip-border);
+    background: var(--hm-color-alert-tip-bg);
+  }
+  .milkdown .github-alert[data-alert-type="important"] {
+    border-left-color: var(--hm-color-alert-important-border);
+    background: var(--hm-color-alert-important-bg);
+  }
+  .milkdown .github-alert[data-alert-type="warning"] {
+    border-left-color: var(--hm-color-alert-warning-border);
+    background: var(--hm-color-alert-warning-bg);
+  }
+  .milkdown .github-alert[data-alert-type="caution"] {
+    border-left-color: var(--hm-color-alert-caution-border);
+    background: var(--hm-color-alert-caution-bg);
+  }
+
+  .milkdown .github-alert-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-bottom: 0.35em;
+    font-weight: 600;
+    font-size: 0.875em;
+    color: var(--hm-color-alert-note-icon);
+    user-select: none;
+  }
+
+  .milkdown .github-alert[data-alert-type="tip"] .github-alert-header {
+    color: var(--hm-color-alert-tip-icon);
+  }
+  .milkdown .github-alert[data-alert-type="important"] .github-alert-header {
+    color: var(--hm-color-alert-important-icon);
+  }
+  .milkdown .github-alert[data-alert-type="warning"] .github-alert-header {
+    color: var(--hm-color-alert-warning-icon);
+  }
+  .milkdown .github-alert[data-alert-type="caution"] .github-alert-header {
+    color: var(--hm-color-alert-caution-icon);
+  }
+
+  .milkdown .github-alert-icon {
+    flex-shrink: 0;
+  }
+
+  .milkdown .github-alert-body {
+    color: var(--hm-color-text);
+  }
+
+  .milkdown .github-alert-body > :last-child {
+    margin-bottom: 0;
+  }
 `
