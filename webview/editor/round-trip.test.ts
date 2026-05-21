@@ -14,6 +14,11 @@ import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { describe, expect, it } from 'vitest'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
+import {
+  githubAlertSchema,
+  patchRemarkForGithubAlerts,
+  remarkGithubAlertsPlugin,
+} from './github-alert-plugin'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 
 const fixturesDir = join(__dirname, '__fixtures__')
@@ -47,10 +52,14 @@ async function roundTrip(markdown: string): Promise<string> {
     .use(remarkMathPlugin)
     .use(mathDisplaySchema)
     .use(mathInlineSchema)
+    .use(remarkGithubAlertsPlugin)
+    .use(githubAlertSchema)
     .create()
 
   editor.action((ctx) => {
-    patchRemarkForTightLists(ctx.get(remarkCtx))
+    const remark = ctx.get(remarkCtx)
+    patchRemarkForTightLists(remark)
+    patchRemarkForGithubAlerts(remark)
   })
 
   const serialized = editor.action((ctx) => {
@@ -72,7 +81,14 @@ describe('round-trip fidelity', () => {
     expect(fixtures.length).toBeGreaterThanOrEqual(5)
   })
 
-  const exactFixtures = ['basic-formatting', 'code-blocks', 'lists', 'mixed-content', 'math']
+  const exactFixtures = [
+    'basic-formatting',
+    'code-blocks',
+    'lists',
+    'mixed-content',
+    'math',
+    'github-alerts',
+  ]
   const driftFixtures = ['gfm-features', 'tables']
 
   describe('exact preservation', () => {
