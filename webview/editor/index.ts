@@ -14,8 +14,8 @@ import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
 import { codeBlockView } from './code-block-view'
-import { createCodeMirrorEditor } from './codemirror-editor'
-import { FindBar } from './find-bar'
+import { CmSearchBackend, createCodeMirrorEditor } from './codemirror-editor'
+import { DomSearchBackend, FindBar } from './find-bar'
 import {
   frontmatterNodeSchema,
   frontmatterView,
@@ -69,8 +69,11 @@ const rawBtn = document.querySelector<HTMLButtonElement>(
   '.mode-btn[data-mode="raw"]',
 ) as HTMLButtonElement
 
+const domBackend = new DomSearchBackend(() => previewContainer)
+const cmBackend = new CmSearchBackend(() => cmEditor)
+
 const findBar = new FindBar(document.body, () => {
-  return currentMode === 'preview' ? previewContainer : cmContainer
+  return currentMode === 'preview' ? domBackend : cmBackend
 })
 
 injectEditorStyles()
@@ -246,6 +249,8 @@ function updateContent(content: string) {
       suppressCmUpdate = false
     }
   }
+
+  findBar.refresh()
 }
 
 function renderFallback(root: HTMLElement, content: string, err: unknown) {

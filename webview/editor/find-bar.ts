@@ -1,15 +1,83 @@
+export interface SearchBackend {
+  search(query: string): number
+  goToMatch(index: number): void
+  clear(): void
+}
+
+export class DomSearchBackend implements SearchBackend {
+  private matches: Range[] = []
+  private searchHL: Highlight | null = null
+  private currentHL: Highlight | null = null
+
+  constructor(private getRoot: () => HTMLElement | null) {
+    if (typeof Highlight !== 'undefined' && CSS.highlights) {
+      this.searchHL = new Highlight()
+      this.currentHL = new Highlight()
+      CSS.highlights.set('hm-search-results', this.searchHL)
+      CSS.highlights.set('hm-search-current', this.currentHL)
+    }
+  }
+
+  search(query: string): number {
+    this.clear()
+    const root = this.getRoot()
+    if (!root) return 0
+
+    const lowerQuery = query.toLowerCase()
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+
+    for (
+      let node = walker.nextNode() as Text | null;
+      node !== null;
+      node = walker.nextNode() as Text | null
+    ) {
+      const text = node.textContent?.toLowerCase() ?? ''
+      let offset = 0
+      while (true) {
+        const idx = text.indexOf(lowerQuery, offset)
+        if (idx === -1) break
+        const range = new Range()
+        range.setStart(node, idx)
+        range.setEnd(node, idx + query.length)
+        this.matches.push(range)
+        this.searchHL?.add(range)
+        offset = idx + 1
+      }
+    }
+
+    return this.matches.length
+  }
+
+  goToMatch(index: number): void {
+    this.currentHL?.clear()
+    const range = this.matches[index]
+    if (!range) return
+    this.currentHL?.add(range)
+
+    const rect = range.getBoundingClientRect()
+    if (rect.top < 60 || rect.bottom > window.innerHeight - 20) {
+      range.startContainer.parentElement?.scrollIntoView({ block: 'center' })
+    }
+  }
+
+  clear(): void {
+    this.searchHL?.clear()
+    this.currentHL?.clear()
+    this.matches = []
+  }
+}
+
 export class FindBar {
   private el: HTMLElement
   private input: HTMLInputElement
   private countLabel: HTMLSpanElement
-  private matches: Range[] = []
+  private matchCount = 0
   private currentIndex = -1
-  private searchHighlight: Highlight | null = null
-  private currentHighlight: Highlight | null = null
-  private getSearchRoot: () => HTMLElement | null
+  private getBackend: () => SearchBackend
+  private activeBackend: SearchBackend | null = null
 
-  constructor(parent: HTMLElement, getSearchRoot: () => HTMLElement | null) {
-    this.getSearchRoot = getSearchRoot
+  constructor(parent: HTMLElement, getBackend: () => SearchBackend) {
+    this.getBackend = getBackend
 
     this.el = document.createElement('div')
     this.el.className = 'find-bar hidden'
@@ -55,13 +123,6 @@ export class FindBar {
         else this.next()
       }
     })
-
-    if (typeof Highlight !== 'undefined' && CSS.highlights) {
-      this.searchHighlight = new Highlight()
-      this.currentHighlight = new Highlight()
-      CSS.highlights.set('hm-search-results', this.searchHighlight)
-      CSS.highlights.set('hm-search-current', this.currentHighlight)
-    }
   }
 
   show() {
@@ -73,10 +134,12 @@ export class FindBar {
 
   hide() {
     this.el.classList.add('hidden')
-    this.clearHighlights()
-    this.matches = []
+    this.activeBackend?.clear()
+    this.activeBackend = null
+    this.matchCount = 0
     this.currentIndex = -1
     this.countLabel.textContent = ''
+    this.input.classList.remove('no-results')
   }
 
   get isVisible() {
@@ -88,86 +151,52 @@ export class FindBar {
   }
 
   private search() {
-    this.clearHighlights()
-    this.matches = []
-    this.currentIndex = -1
+    const backend = this.getBackend()
+    if (backend !== this.activeBackend) {
+      this.activeBackend?.clear()
+      this.activeBackend = backend
+    }
 
+    this.currentIndex = -1
     const query = this.input.value
     if (!query) {
+      this.activeBackend.clear()
+      this.matchCount = 0
       this.countLabel.textContent = ''
+      this.input.classList.remove('no-results')
       return
     }
 
-    const root = this.getSearchRoot()
-    if (!root) return
+    this.matchCount = this.activeBackend.search(query)
 
-    const lowerQuery = query.toLowerCase()
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-
-    for (
-      let node = walker.nextNode() as Text | null;
-      node !== null;
-      node = walker.nextNode() as Text | null
-    ) {
-      const text = node.textContent?.toLowerCase() ?? ''
-      let offset = 0
-      while (true) {
-        const idx = text.indexOf(lowerQuery, offset)
-        if (idx === -1) break
-        const range = new Range()
-        range.setStart(node, idx)
-        range.setEnd(node, idx + query.length)
-        this.matches.push(range)
-        this.searchHighlight?.add(range)
-        offset = idx + 1
-      }
-    }
-
-    if (this.matches.length > 0) {
+    if (this.matchCount > 0) {
       this.currentIndex = 0
-      this.scrollToCurrent()
+      this.activeBackend.goToMatch(0)
     }
 
     this.updateCount()
   }
 
   next() {
-    if (this.matches.length === 0) return
-    this.currentIndex = (this.currentIndex + 1) % this.matches.length
-    this.scrollToCurrent()
+    if (this.matchCount === 0) return
+    this.currentIndex = (this.currentIndex + 1) % this.matchCount
+    this.activeBackend?.goToMatch(this.currentIndex)
     this.updateCount()
   }
 
   prev() {
-    if (this.matches.length === 0) return
-    this.currentIndex = (this.currentIndex - 1 + this.matches.length) % this.matches.length
-    this.scrollToCurrent()
+    if (this.matchCount === 0) return
+    this.currentIndex = (this.currentIndex - 1 + this.matchCount) % this.matchCount
+    this.activeBackend?.goToMatch(this.currentIndex)
     this.updateCount()
   }
 
-  private scrollToCurrent() {
-    this.currentHighlight?.clear()
-    if (this.currentIndex < 0 || this.currentIndex >= this.matches.length) return
-    const range = this.matches[this.currentIndex]
-    this.currentHighlight?.add(range)
-
-    const rect = range.getBoundingClientRect()
-    if (rect.top < 60 || rect.bottom > window.innerHeight - 20) {
-      range.startContainer.parentElement?.scrollIntoView({ block: 'center' })
-    }
-  }
-
-  private clearHighlights() {
-    this.searchHighlight?.clear()
-    this.currentHighlight?.clear()
-  }
-
   private updateCount() {
-    if (this.matches.length === 0 && this.input.value) {
+    if (this.matchCount === 0 && this.input.value) {
       this.countLabel.textContent = 'No results'
       this.input.classList.add('no-results')
-    } else if (this.matches.length > 0) {
-      this.countLabel.textContent = `${this.currentIndex + 1} of ${this.matches.length}`
+    } else if (this.matchCount > 0) {
+      this.countLabel.textContent = `${this.currentIndex + 1} of ${this.matchCount}`
       this.input.classList.remove('no-results')
     } else {
       this.countLabel.textContent = ''
