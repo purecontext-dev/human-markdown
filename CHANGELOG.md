@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 - 2026-05-21
+
+- Increased paragraph spacing in WYSIWYG mode to match standard rendered markdown
+- Renamed mode toggle to "Rich Text | Markdown" to avoid confusion with Cursor IDE's built-in toggle
+
 ## 0.2.0 - 2026-05-20
 
 - Three-way merge for external file changes — non-overlapping edits merge silently, conflicting edits show a conflict bar with "Accept External" / "Keep My Edits"
