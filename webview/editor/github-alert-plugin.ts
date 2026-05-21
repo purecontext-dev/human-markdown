@@ -121,7 +121,6 @@ const unescapeAlertRegex = /\\\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/gi
 export function patchRemarkForGithubAlerts(remark: any): void {
   const origStringify = remark.stringify.bind(remark)
   remark.stringify = (tree: MdastNode, ...args: unknown[]) => {
-    convertAlertsToBlockquotes(tree)
     const result = origStringify(tree, ...args) as string
     return result.replace(unescapeAlertRegex, '[!$1]')
   }
@@ -158,7 +157,11 @@ export const githubAlertSchema = $nodeSchema('github_alert', () => ({
   toMarkdown: {
     match: (node) => node.type.name === 'github_alert',
     runner: (state, node) => {
-      state.openNode('github_alert', undefined, { alertType: node.attrs.alertType as string })
+      const alertType = (node.attrs.alertType as string).toUpperCase()
+      state.openNode('blockquote')
+      state.openNode('paragraph')
+      state.addNode('text', undefined, `[!${alertType}]`)
+      state.closeNode()
       state.next(node.content)
       state.closeNode()
     },
