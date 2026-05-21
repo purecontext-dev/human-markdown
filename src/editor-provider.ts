@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import * as path from 'node:path'
 import * as vscode from 'vscode'
 import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from './messages'
 import { getConfiguredThemeName, resolveThemeTokens } from './theme-resolver'
@@ -136,26 +137,32 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'accept-external': {
-          webviewIsDirty = false
-          vscode.workspace.fs.readFile(document.uri).then((bytes) => {
-            const diskContent = new TextDecoder().decode(bytes)
-            suppressNextSync = true
-            const edit = new vscode.WorkspaceEdit()
-            const fullRange = new vscode.Range(
-              document.positionAt(0),
-              document.positionAt(document.getText().length),
-            )
-            edit.replace(document.uri, fullRange, diskContent)
-            vscode.workspace.applyEdit(edit).then(
-              () => {
-                suppressNextSync = false
-                this.postMessage(webview, { type: 'update', content: diskContent })
-              },
-              () => {
-                suppressNextSync = false
-              },
-            )
-          })
+          vscode.workspace.fs.readFile(document.uri).then(
+            (bytes) => {
+              const diskContent = new TextDecoder().decode(bytes)
+              suppressNextSync = true
+              const edit = new vscode.WorkspaceEdit()
+              const fullRange = new vscode.Range(
+                document.positionAt(0),
+                document.positionAt(document.getText().length),
+              )
+              edit.replace(document.uri, fullRange, diskContent)
+              vscode.workspace.applyEdit(edit).then(
+                () => {
+                  webviewIsDirty = false
+                  suppressNextSync = false
+                  this.postMessage(webview, { type: 'update', content: diskContent })
+                },
+                () => {
+                  suppressNextSync = false
+                  this.postMessage(webview, { type: 'external-change' })
+                },
+              )
+            },
+            () => {
+              this.postMessage(webview, { type: 'external-change' })
+            },
+          )
           break
         }
         case 'keep-mine': {
@@ -189,22 +196,23 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       if (e.document.uri.toString() !== document.uri.toString()) return
       if (suppressNextSync) return
       if (webviewIsDirty) {
-        this.postMessage(webview, { type: 'external-change', content: document.getText() })
+        this.postMessage(webview, { type: 'external-change' })
       } else {
         this.postMessage(webview, { type: 'update', content: document.getText() })
       }
     })
 
+    const docDir = vscode.Uri.joinPath(document.uri, '..')
+    const docBasename = path.basename(document.uri.fsPath)
     const fileWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(document.uri, '*'),
+      new vscode.RelativePattern(docDir, docBasename),
     )
-    const onFileChange = fileWatcher.onDidChange(async (uri) => {
-      if (uri.toString() !== document.uri.toString()) return
+    const onFileChange = fileWatcher.onDidChange(async () => {
       if (!webviewIsDirty) return
       const diskBytes = await vscode.workspace.fs.readFile(document.uri)
       const diskContent = new TextDecoder().decode(diskBytes)
       if (diskContent !== document.getText()) {
-        this.postMessage(webview, { type: 'external-change', content: diskContent })
+        this.postMessage(webview, { type: 'external-change' })
       }
     })
 

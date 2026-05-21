@@ -45,7 +45,7 @@ declare function acquireVsCodeApi(): VsCodeApi
 
 type ExtensionMessage =
   | { type: 'update'; content: string }
-  | { type: 'external-change'; content: string }
+  | { type: 'external-change' }
   | { type: 'restore-state'; state: WebviewState }
   | { type: 'theme'; tokens: ThemeTokens }
   | { type: 'toggle-mode' }
@@ -88,7 +88,6 @@ function setDirty(dirty: boolean) {
 const conflictBar = new ConflictBar(
   document.body,
   () => {
-    setDirty(false)
     vscode.postMessage({ type: 'accept-external' })
   },
   () => {

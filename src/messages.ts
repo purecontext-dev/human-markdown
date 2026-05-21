@@ -2,7 +2,7 @@ import type { ThemeTokens } from '../webview/shared/theme/tokens'
 
 export type ExtensionToWebviewMessage =
   | { type: 'update'; content: string }
-  | { type: 'external-change'; content: string }
+  | { type: 'external-change' }
   | { type: 'restore-state'; state: WebviewState }
   | { type: 'theme'; tokens: ThemeTokens }
   | { type: 'toggle-mode' }
