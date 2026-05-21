@@ -331,7 +331,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 <body style="--hm-zoom-compensation: ${zoomCompensation}; --hm-cm-font-family: ${escapeFontFamily(fontFamily)}; --hm-cm-font-size: ${fontSize}px; --hm-cm-line-height: ${lineHeight}px;">
   <div id="toolbar">
     <div class="mode-toggle">
-      <button class="mode-btn active" data-mode="preview">Preview</button>
+      <button class="mode-btn active" data-mode="preview">Rich Text</button>
       <button class="mode-btn" data-mode="raw">Markdown</button>
     </div>
   </div>
