@@ -45,6 +45,7 @@ declare function acquireVsCodeApi(): VsCodeApi
 
 type ExtensionMessage =
   | { type: 'update'; content: string }
+  | { type: 'merge-update'; content: string }
   | { type: 'external-change' }
   | { type: 'restore-state'; state: WebviewState }
   | { type: 'theme'; tokens: ThemeTokens }
@@ -242,7 +243,7 @@ async function initMilkdown(content: string) {
   })
 }
 
-function updateContent(content: string) {
+function updateContent(content: string, opts?: { keepDirty?: boolean }) {
   if (content === currentContent) return
   currentContent = content
 
@@ -272,8 +273,10 @@ function updateContent(content: string) {
     }
   }
 
-  setDirty(false)
-  conflictBar.hide()
+  if (!opts?.keepDirty) {
+    setDirty(false)
+    conflictBar.hide()
+  }
   findBar.refresh()
 }
 
@@ -314,6 +317,9 @@ window.addEventListener('message', (event) => {
       } else {
         initMilkdown(msg.content)
       }
+      break
+    case 'merge-update':
+      updateContent(msg.content, { keepDirty: true })
       break
     case 'external-change':
       conflictBar.show()

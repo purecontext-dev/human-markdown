@@ -100,7 +100,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const tryMergeExternal = (diskContent: string): boolean => {
       const result = threeWayMerge(baseContent, document.getText(), diskContent)
       if (result.conflict) return false
-      baseContent = result.merged
+      baseContent = diskContent
       suppressNextSync = true
       const edit = new vscode.WorkspaceEdit()
       const fullRange = new vscode.Range(
@@ -111,7 +111,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.workspace.applyEdit(edit).then(
         () => {
           suppressNextSync = false
-          this.postMessage(webview, { type: 'update', content: result.merged })
+          this.postMessage(webview, { type: 'merge-update', content: result.merged })
         },
         () => {
           suppressNextSync = false
