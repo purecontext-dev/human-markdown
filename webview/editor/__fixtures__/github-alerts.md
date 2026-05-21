@@ -24,3 +24,6 @@
 > - Item one
 > - Item two
 > - Item three
+
+> [!WARNING]
+> Separate type line normalizes to inline format through ProseMirror.

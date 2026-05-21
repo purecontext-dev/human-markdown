@@ -24,6 +24,21 @@ describe('theme tokens', () => {
     '--hm-color-table-header-bg',
     '--hm-color-frontmatter-bg',
     '--hm-color-frontmatter-border',
+    '--hm-color-alert-note-border',
+    '--hm-color-alert-note-bg',
+    '--hm-color-alert-note-icon',
+    '--hm-color-alert-tip-border',
+    '--hm-color-alert-tip-bg',
+    '--hm-color-alert-tip-icon',
+    '--hm-color-alert-important-border',
+    '--hm-color-alert-important-bg',
+    '--hm-color-alert-important-icon',
+    '--hm-color-alert-warning-border',
+    '--hm-color-alert-warning-bg',
+    '--hm-color-alert-warning-icon',
+    '--hm-color-alert-caution-border',
+    '--hm-color-alert-caution-bg',
+    '--hm-color-alert-caution-icon',
   ]
 
   it('light theme defines all required tokens', () => {

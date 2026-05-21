@@ -98,6 +98,14 @@ describe('spike: custom remark transform', () => {
     const text = bodyPara.children?.map((c) => c.value || '').join('')
     expect(text).toContain('Body here.')
   })
+
+  it('handles empty-body alert without crashing', () => {
+    const tree = parseWithAlerts('> [!NOTE]')
+    const alert = tree.children?.[0]
+    expect(alert.type).toBe('github_alert')
+    expect(alert.alertType).toBe('note')
+    expect(alert.children?.length).toBeGreaterThan(0)
+  })
 })
 
 describe('spike: round-trip fidelity', () => {
@@ -119,10 +127,10 @@ describe('spike: round-trip fidelity', () => {
     expect(output).toBe(input)
   })
 
-  it('round-trips alert with blank line after type', () => {
+  it('normalizes blank-line-after-type to inline format', () => {
     const input = '> [!IMPORTANT]\n>\n> Content after blank line.\n'
     const output = roundTrip(input)
-    expect(output).toBe(input)
+    expect(output).toBe('> [!IMPORTANT]\n> Content after blank line.\n')
   })
 
   it('round-trips mixed alerts and regular blockquotes', () => {

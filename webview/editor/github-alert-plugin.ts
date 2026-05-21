@@ -10,7 +10,6 @@ interface MdastNode {
   type: string
   value?: string
   alertType?: string
-  separateTypeLine?: boolean
   children?: MdastNode[]
   position?: unknown
   spread?: boolean | string | null
@@ -44,12 +43,10 @@ export function remarkGithubAlerts() {
 
       const alertType = match[1].toLowerCase() as AlertType
       const remaining = firstText.value.slice(match[0].length)
-      let separateTypeLine = false
 
       if (remaining.startsWith('\n')) {
         firstText.value = remaining.slice(1)
       } else if (remaining === '') {
-        separateTypeLine = true
         const siblings = firstChild.children ?? []
         if (siblings.length > 1) {
           siblings.shift()
@@ -71,11 +68,14 @@ export function remarkGithubAlerts() {
       }
 
       if (!parent.children) return
+      const alertChildren = bq.children ?? []
+      if (alertChildren.length === 0) {
+        alertChildren.push({ type: 'paragraph', children: [{ type: 'text', value: '' }] })
+      }
       parent.children[index] = {
         type: 'github_alert',
         alertType,
-        separateTypeLine,
-        children: bq.children,
+        children: alertChildren,
         position: bq.position,
       }
     })
@@ -90,12 +90,7 @@ export function convertAlertsToBlockquotes(node: MdastNode): void {
       const alertType = (child.alertType as string).toUpperCase()
       const children = child.children ?? []
 
-      if (child.separateTypeLine) {
-        children.unshift({
-          type: 'paragraph',
-          children: [{ type: 'text', value: `[!${alertType}]` }],
-        })
-      } else if (children.length > 0 && children[0].type === 'paragraph') {
+      if (children.length > 0 && children[0].type === 'paragraph') {
         const para = children[0]
         const firstText = para.children?.[0]
         if (firstText?.type === 'text') {
