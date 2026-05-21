@@ -1,18 +1,12 @@
 # Session Resume Context
 
-## Status
-Frontmatter and code block fixes shipped (branch: `fix/frontmatter-dark-mode-coloring`). Three tasks from the Human Markdown project addressed.
+## Working on
+ADR collection for Human Markdown — branch `docs/adr-collection`
 
-## Key decisions
-- **Code blocks read-only in WYSIWYG** — Rendered Shiki overlay always visible. Text selectable for copying. Editing requires switching to markdown view. Click-to-edit and focusin/focusout editing class management removed.
-- **Frontmatter keeps inline editing** — Click-vs-drag detection on rendered overlay (matching prior code-block pattern). Clicks enter editing mode, drags select text.
-- **Shiki tabindex stripped** — Shiki generates `<pre tabindex="0">` which steals focus from the editing layer, breaking click-to-edit. Both frontmatter and code-block views strip it.
-- **Frontmatter theme-changed listener** — Was missing; code blocks had it. Added with proper cleanup in `destroy()`.
-- **CSS inheritance resets** — Global `.milkdown pre` and `.milkdown code` rules bled border/padding/background into Shiki elements inside rendered overlays. Reset in both code-block and frontmatter CSS.
-- **External edit dirty state** — `syncingContent` flag absorbs Milkdown normalization during init and external updates, preventing spurious `edit` messages that made the document dirty.
+## Completed
+Mined 16 Claude Code session transcripts for architectural decisions. Split monolithic `docs/adrs/adrs.md` into 18 individual ADR files plus a README index. Deleted the monolithic file.
 
-## Key context
-- Bundle is 475KB gzipped (under 500KB target), 23 tests pass
-- `mock.html` at project root for rapid CSS iteration (not shipped in extension)
-- Dead CSS: `.code-block-view.editing` rules are now unreachable (code blocks never enter editing mode). Clean up in follow-up.
-- Tasks tracked in purecontext-tasks project "Human Markdown", not in file-source plans
+ADRs 001-003 extracted from existing documentation. ADRs 004-018 written from transcript evidence covering: code block editing model, IIFE bundles, find bar, CodeMirror raw mode, theme engine, hybrid WYSIWYG model, frontmatter rendering, CSP/Mermaid security, spellcheck blocker, list round-trip fix, zoom compensation, link opening, dual marketplace publishing, Shiki grammars, and document sync.
+
+## Next
+Review, commit, and PR the ADR collection. Update any project rules that reference the old monolithic file.
