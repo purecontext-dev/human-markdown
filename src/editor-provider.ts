@@ -26,6 +26,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       }
     })
 
+    const findCommand = vscode.commands.registerCommand('humanMarkdown.find', () => {
+      for (const webview of provider.webviews) {
+        provider.postMessage(webview, { type: 'show-find' })
+      }
+    })
+
     const selectThemeCommand = vscode.commands.registerCommand(
       'humanMarkdown.selectTheme',
       async () => {
@@ -61,6 +67,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     return vscode.Disposable.from(
       registration,
       toggleCommand,
+      findCommand,
       selectThemeCommand,
       onConfigChange,
       onColorThemeChange,
@@ -132,6 +139,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             const targetUri = vscode.Uri.joinPath(docDir, href)
             vscode.commands.executeCommand('vscode.open', targetUri)
           }
+          break
+        }
+        case 'save': {
+          document.save()
           break
         }
       }
