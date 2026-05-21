@@ -6,12 +6,14 @@ export type ExtensionToWebviewMessage =
   | { type: 'theme'; tokens: ThemeTokens }
   | { type: 'toggle-mode' }
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
+  | { type: 'show-find' }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }
   | { type: 'edit'; content: string }
   | { type: 'save-state'; state: WebviewState }
   | { type: 'open-link'; href: string }
+  | { type: 'save' }
 
 export interface WebviewState {
   scrollTop: number

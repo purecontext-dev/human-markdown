@@ -79,3 +79,84 @@ body {
   font-size: var(--hm-cm-font-size) !important;
   line-height: var(--hm-cm-line-height) !important;
 }
+
+/* Find bar */
+.find-bar {
+  position: fixed;
+  top: 33px;
+  right: 28px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 4px 4px 8px;
+  background: var(--vscode-editorWidget-background, #252526);
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.find-bar.hidden {
+  display: none;
+}
+
+.find-input {
+  width: 220px;
+  padding: 3px 6px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #cccccc);
+  outline: none;
+  font-size: 13px;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  border-radius: 2px;
+}
+
+.find-input:focus {
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+
+.find-input.no-results {
+  background: var(--vscode-inputValidation-errorBackground, rgba(255, 0, 0, 0.1));
+  border-color: var(--vscode-inputValidation-errorBorder, #be1100);
+}
+
+.find-count {
+  font-size: 12px;
+  color: var(--vscode-editorWidget-foreground, #cccccc);
+  min-width: 65px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.find-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--vscode-icon-foreground, #c5c5c5);
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 3px;
+  padding: 0;
+}
+
+.find-nav-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.find-close {
+  margin-left: 2px;
+}
+
+::highlight(hm-search-results) {
+  background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
+}
+
+::highlight(hm-search-current) {
+  background-color: var(--vscode-editor-findMatchBackground, rgba(168, 133, 0, 0.58));
+}

@@ -1,7 +1,7 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
+import { highlightSelectionMatches } from '@codemirror/search'
 import { EditorState } from '@codemirror/state'
 import { EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
@@ -79,12 +79,6 @@ const vscodeTheme = EditorView.theme({
   '.cm-selectionMatch': {
     backgroundColor: 'var(--vscode-editor-selectionHighlightBackground, rgba(173,214,255,0.15))',
   },
-  '.cm-searchMatch': {
-    backgroundColor: 'var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33))',
-  },
-  '.cm-searchMatch.cm-searchMatch-selected': {
-    backgroundColor: 'var(--vscode-editor-findMatchBackground, rgba(81,92,106,0.6))',
-  },
 })
 
 function isDarkTheme(): boolean {
@@ -113,7 +107,7 @@ export function createCodeMirrorEditor(
       syntaxHighlighting(highlightStyle),
       highlightSelectionMatches(),
       markdown(),
-      keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
       vscodeTheme,
       updateListener,
       EditorView.lineWrapping,

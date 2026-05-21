@@ -15,6 +15,7 @@ import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
 import { codeBlockView } from './code-block-view'
 import { createCodeMirrorEditor } from './codemirror-editor'
+import { FindBar } from './find-bar'
 import {
   frontmatterNodeSchema,
   frontmatterView,
@@ -47,6 +48,7 @@ type ExtensionMessage =
   | { type: 'theme'; tokens: ThemeTokens }
   | { type: 'toggle-mode' }
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
+  | { type: 'show-find' }
 
 const vscode = acquireVsCodeApi()
 
@@ -66,6 +68,10 @@ const previewBtn = document.querySelector<HTMLButtonElement>(
 const rawBtn = document.querySelector<HTMLButtonElement>(
   '.mode-btn[data-mode="raw"]',
 ) as HTMLButtonElement
+
+const findBar = new FindBar(document.body, () => {
+  return currentMode === 'preview' ? previewContainer : cmContainer
+})
 
 injectEditorStyles()
 
@@ -125,6 +131,7 @@ function setMode(mode: 'preview' | 'raw') {
   }
 
   saveScrollState()
+  findBar.refresh()
 }
 
 function toggleMode() {
@@ -295,9 +302,31 @@ window.addEventListener('message', (event) => {
     case 'set-mode':
       setMode(msg.mode)
       break
+    case 'show-find':
+      findBar.show()
+      break
   }
 })
 
 window.addEventListener('scroll', () => saveScrollState(), { passive: true })
+
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (!(e.metaKey || e.ctrlKey)) return
+    if (e.key === 'f') {
+      e.preventDefault()
+      findBar.show()
+    } else if (e.key === 'g' && findBar.isVisible) {
+      e.preventDefault()
+      if (e.shiftKey) findBar.prev()
+      else findBar.next()
+    } else if (e.key === 's') {
+      e.preventDefault()
+      vscode.postMessage({ type: 'save' })
+    }
+  },
+  true,
+)
 
 vscode.postMessage({ type: 'ready' })

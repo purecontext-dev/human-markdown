@@ -40,6 +40,10 @@
         "title": "Human Markdown: Toggle WYSIWYG / Raw"
       },
       {
+        "command": "humanMarkdown.find",
+        "title": "Human Markdown: Find"
+      },
+      {
         "command": "humanMarkdown.selectTheme",
         "title": "Human Markdown: Select Theme"
       }
@@ -49,6 +53,11 @@
         "command": "humanMarkdown.toggle",
         "key": "cmd+shift+v",
         "when": "resourceExtname == .md"
+      },
+      {
+        "command": "humanMarkdown.find",
+        "key": "cmd+f",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
       }
     ],
     "configuration": {
