@@ -6,7 +6,7 @@ status: draft
 tags: [engineering, planning, q3]
 ---
 
-# Building a Better Search Engine
+# Building a Better Search Engine&#x20;
 
 Our team is building a next-generation search engine that combines traditional information retrieval with modern language models. This document outlines the technical approach, current progress, and remaining work.
 
@@ -134,9 +134,9 @@ The final hybrid score blends lexical and semantic signals: $s_{\text{hybrid}} =
 
 We benchmark against MS MARCO and Natural Questions:
 
-- **MRR@10**: 0.38 (target: 0.40)
-- **NDCG@10**: 0.45 (target: 0.48)
-- **Recall@100**: 0.92 (target: 0.95)
+- **MRR\@10**: 0.38 (target: 0.40)
+- **NDCG\@10**: 0.45 (target: 0.48)
+- **Recall\@100**: 0.92 (target: 0.95)
 - **P95 latency**: 220ms (target: <200ms)
 
 ## Team Notes
@@ -148,7 +148,7 @@ The generation layer is the most experimental part of the stack. We're currently
    - Con: answers feel robotic and fragmented
 2. Abstractive generation with citations — synthesize a natural answer and link claims to sources
    - Pro: best user experience
-   - Con: citation accuracy is ~85%, needs reranker to improve
+   - Con: citation accuracy is \~85%, needs reranker to improve
 3. Hybrid — extractive for factual queries, abstractive for explanatory ones
    - Pro: best of both worlds
    - Con: need a reliable query classifier
@@ -158,4 +158,3 @@ The generation layer is the most experimental part of the stack. We're currently
 ## Next Steps
 
 Ship the reranker integration this week, then run a full eval pass. If MRR improves to 0.40+, we greenlight the internal alpha. Target launch: **June 15**.
-
