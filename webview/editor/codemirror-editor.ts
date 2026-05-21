@@ -1,4 +1,4 @@
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches } from '@codemirror/search'
@@ -107,7 +107,7 @@ export function createCodeMirrorEditor(
       syntaxHighlighting(highlightStyle),
       highlightSelectionMatches(),
       markdown(),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
+      keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
       vscodeTheme,
       updateListener,
       EditorView.lineWrapping,
