@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-05-20
+
+- Three-way merge for external file changes — non-overlapping edits merge silently, conflicting edits show a conflict bar with "Accept External" / "Keep My Edits"
+- FileSystemWatcher detects disk changes even when the document is dirty
+- Scrollbar gutter stabilized — toolbar buttons no longer shift on mode toggle
+- 18 architecture decision records documenting development choices
+
 ## 0.1.3 - 2026-05-20
 
 - Cmd+F find bar with pluggable search backends (DOM search for WYSIWYG, CodeMirror search for raw mode)
