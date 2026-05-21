@@ -84,4 +84,12 @@ describe('threeWayMerge', () => {
     expect(result.conflict).toBe(false)
     expect(result.merged).toBe(mine)
   })
+
+  it('detects conflict when zero-length insertion meets replacement at same point', () => {
+    const base = 'a\nb\nc'
+    const mine = 'a\ninserted\nb\nc'
+    const theirs = 'a\nreplaced\nc'
+    const result = threeWayMerge(base, mine, theirs)
+    expect(result.conflict).toBe(true)
+  })
 })

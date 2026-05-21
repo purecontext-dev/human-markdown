@@ -101,7 +101,6 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const tryMergeExternal = (diskContent: string): boolean => {
       const result = threeWayMerge(baseContent, document.getText(), diskContent)
       if (result.conflict) return false
-      baseContent = diskContent
       suppressNextSync = true
       const edit = new vscode.WorkspaceEdit()
       const fullRange = new vscode.Range(
@@ -111,11 +110,13 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       edit.replace(document.uri, fullRange, result.merged)
       vscode.workspace.applyEdit(edit).then(
         () => {
+          baseContent = diskContent
           suppressNextSync = false
           this.postMessage(webview, { type: 'merge-update', content: result.merged })
         },
         () => {
           suppressNextSync = false
+          this.postMessage(webview, { type: 'external-change' })
         },
       )
       return true
@@ -254,12 +255,16 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const onFileChange = fileWatcher.onDidChange(async () => {
       if (suppressFileWatcher) return
       if (!webviewIsDirty) return
-      const diskBytes = await vscode.workspace.fs.readFile(document.uri)
-      const diskContent = new TextDecoder().decode(diskBytes)
-      if (diskContent !== document.getText()) {
-        if (!tryMergeExternal(diskContent)) {
-          this.postMessage(webview, { type: 'external-change' })
+      try {
+        const diskBytes = await vscode.workspace.fs.readFile(document.uri)
+        const diskContent = new TextDecoder().decode(diskBytes)
+        if (diskContent !== document.getText()) {
+          if (!tryMergeExternal(diskContent)) {
+            this.postMessage(webview, { type: 'external-change' })
+          }
         }
+      } catch {
+        this.postMessage(webview, { type: 'external-change' })
       }
     })
 

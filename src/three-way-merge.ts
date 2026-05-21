@@ -79,7 +79,9 @@ function editsOverlap(a: Edit[], b: Edit[]): boolean {
   for (const ea of a) {
     for (const eb of b) {
       if (ea.baseStart < eb.baseEnd && eb.baseStart < ea.baseEnd) return true
-      if (ea.baseStart === eb.baseStart && ea.baseEnd === eb.baseEnd) return true
+      if (ea.baseStart === eb.baseStart) return true
+      if (ea.baseStart === eb.baseEnd && ea.baseStart === ea.baseEnd) return true
+      if (eb.baseStart === ea.baseEnd && eb.baseStart === eb.baseEnd) return true
     }
   }
   return false
