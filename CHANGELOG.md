@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.3 - 2026-05-20
+
+- Cmd+F find bar with pluggable search backends (DOM search for WYSIWYG, CodeMirror search for raw mode)
+- Cmd+S save support in the webview
+- Tab/Shift+Tab indentation in raw mode
+
+## 0.1.2 - 2026-05-20
+
+- Upgrade CI to Node 22
+
+## 0.1.1 - 2026-05-19
+
+- Open VSX publishing for Cursor marketplace
+- Publish skill for release workflow
+- Community files (SECURITY.md, CONTRIBUTING.md)
+- Demo document
+
 ## 0.1.0 - 2026-05-19
 
 Initial release.

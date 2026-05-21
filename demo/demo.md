@@ -22,14 +22,14 @@ We chose this architecture after evaluating several alternatives. The tradeoffs 
 
 ## Technical Stack
 
-| Component | Technology | Status | Owner |
-|-----------|-----------|--------|-------|
-| Crawler | Scrapy + Playwright | Production | @martinez |
-| Index | Elasticsearch 8.x | Production | @chen |
-| Embeddings | `all-MiniLM-L6-v2` | Production | @chen |
-| Reranker | Cross-encoder | Beta | @park |
-| Generation | Claude Sonnet | Alpha | @jones |
-| Frontend | Next.js 15 | Alpha | @williams |
+| Component  | Technology          | Status     | Owner     |
+| ---------- | ------------------- | ---------- | --------- |
+| Crawler    | Scrapy + Playwright | Production | @martinez |
+| Index      | Elasticsearch 8.x   | Production | @chen     |
+| Embeddings | `all-MiniLM-L6-v2`  | Production | @chen     |
+| Reranker   | Cross-encoder       | Beta       | @park     |
+| Generation | Claude Sonnet       | Alpha      | @jones    |
+| Frontend   | Next.js 15          | Alpha      | @williams |
 
 ## Query Pipeline
 
@@ -52,7 +52,7 @@ The retrieval function combines lexical and semantic search with configurable we
 ```typescript
 async function hybridSearch(
   query: string,
-  options: SearchOptions = {}
+  options: SearchOptions = {},
 ): Promise<SearchResult[]> {
   const { topK = 20, alpha = 0.7 } = options
 
@@ -87,7 +87,7 @@ retrieval:
   bm25_weight: 0.3
   vector_weight: 0.7
   top_k: 20
-  
+
 reranking:
   model: cross-encoder/ms-marco-MiniLM-L-12-v2
   top_k: 5

@@ -24,13 +24,19 @@ Publish a new release of Human Markdown to both the VS Code Marketplace and the 
 
 4. **Bump the version** — edit the `version` field in `package.json`. Do not use `npm version` (it creates its own commit and tag with the wrong format).
 
-5. **Create a release branch and PR** — main has branch protection, so direct pushes are blocked.
+5. **Update the changelog** — add a new section at the top of `CHANGELOG.md` for the new version:
+   - Use `git log --oneline` from the last tag to HEAD to find what changed
+   - Write user-facing entries (features, fixes, improvements). Skip internal chores (version bumps, CI tweaks, docs-only changes unless they're meaningful to users).
+   - Format: `## <version> - <YYYY-MM-DD>` followed by bulleted list
+   - If uncertain about what's user-facing, ask the user
+
+6. **Create a release branch and PR** — main has branch protection, so direct pushes are blocked.
    - Create branch `chore/release-<new-version>`
    - Commit with message: `chore: bump version to <new-version>`
    - Push the branch and open a PR
    - Tell the user to merge the PR, then wait
 
-6. **After the PR merges** — reset to main, then tag and push:
+7. **After the PR merges** — reset to main, then tag and push:
    - `git checkout main && git pull`
    - `git tag v<new-version>`
    - `git push origin v<new-version>`
@@ -39,7 +45,7 @@ Publish a new release of Human Markdown to both the VS Code Marketplace and the 
    - **VS Code Marketplace** via `vsce` (uses `VSCE_PAT` secret)
    - **Open VSX / Cursor** via `ovsx` (uses `OVSX_PAT` secret)
 
-7. **Link the Actions run** — use `gh run list` to find the triggered workflow run and give the user a link to monitor it.
+8. **Link the Actions run** — use `gh run list` to find the triggered workflow run and give the user a link to monitor it.
 
 ## Important
 
