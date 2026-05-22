@@ -173,10 +173,17 @@ const editorCSS = `
     border: none;
   }
 
-  .milkdown .code-block-view .code-lang {
+  .milkdown .code-block-view .code-header {
     position: absolute;
     top: 0.5em;
     right: 0.5em;
+    display: flex;
+    gap: 0.3em;
+    align-items: center;
+    z-index: 3;
+  }
+
+  .milkdown .code-block-view .code-lang {
     font-family: var(--hm-font-code);
     font-size: 0.7em;
     color: var(--hm-color-text-muted);
@@ -184,8 +191,34 @@ const editorCSS = `
     border: 1px solid var(--hm-color-border);
     border-radius: 4px;
     padding: 0.15em 0.5em;
-    z-index: 2;
     pointer-events: none;
+  }
+
+  .milkdown .code-block-view .code-copy {
+    font-size: 0.8em;
+    color: var(--hm-color-text-muted);
+    background: var(--hm-color-bg-secondary);
+    border: 1px solid var(--hm-color-border);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1;
+  }
+
+  .milkdown .code-block-view:hover .code-copy {
+    opacity: 1;
+  }
+
+  .milkdown .code-block-view .code-copy.copied {
+    color: var(--hm-color-link);
+    border-color: var(--hm-color-link);
+    opacity: 1;
+  }
+
+  .milkdown .code-block-view.is-mermaid .code-copy {
+    display: none;
   }
 
   .milkdown .code-block-view .code-wrap-toggle {
