@@ -232,8 +232,8 @@ async function initMilkdown(content: string) {
           rule: '-',
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
-          currentContent = markdown
           if (suppressMilkdownUpdate || syncingContent) return
+          currentContent = markdown
           setDirty(true)
           vscode.postMessage({ type: 'edit', content: markdown })
         })
