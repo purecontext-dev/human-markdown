@@ -2,7 +2,7 @@ import remarkParse from 'remark-parse'
 import remarkStringify from 'remark-stringify'
 import { unified } from 'unified'
 import { describe, expect, it } from 'vitest'
-import { patchRemarkForGithubAlerts, remarkGithubAlerts } from './github-alert-plugin'
+import { convertAlertsToBlockquotes, remarkGithubAlerts } from './github-alert-plugin'
 
 interface MdastNode {
   type: string
@@ -23,7 +23,13 @@ function roundTrip(md: string): string {
     .use(remarkGithubAlerts)
     .use(remarkStringify, { bullet: '-', rule: '-' })
 
-  patchRemarkForGithubAlerts(processor)
+  const origStringify = processor.stringify.bind(processor)
+  // biome-ignore lint/suspicious/noExplicitAny: patching unified processor internals
+  processor.stringify = (tree: any, ...args: any[]) => {
+    convertAlertsToBlockquotes(tree)
+    const result = origStringify(tree, ...args) as string
+    return result.replace(/\\\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/gi, '[!$1]')
+  }
 
   return String(processor.processSync(md))
 }
