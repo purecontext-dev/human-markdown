@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 - 2026-05-22
+
+- Copy-to-clipboard button on code blocks with error feedback on failure
+- Offer to reopen markdown files with the WYSIWYG editor on first install
+- Save confirmation round-trip prevents silent data loss
+- Fixed false "save failed" errors in raw mode
+- Fixed double-click timer corruption on copy button
+
 ## 0.3.0 - 2026-05-21
 
 - GitHub-style alert blocks (NOTE, TIP, IMPORTANT, WARNING, CAUTION) rendered in WYSIWYG mode
