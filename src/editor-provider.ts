@@ -252,7 +252,6 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
               },
               () => {
                 suppressNextSync = false
-                doSave()
               },
             )
           } else {
