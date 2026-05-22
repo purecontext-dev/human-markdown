@@ -58,6 +58,31 @@
         "command": "humanMarkdown.find",
         "key": "cmd+f",
         "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
+        "key": "cmd+z",
+        "command": "-undo",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
+        "key": "ctrl+z",
+        "command": "-undo",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
+        "key": "cmd+shift+z",
+        "command": "-redo",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
+        "key": "ctrl+shift+z",
+        "command": "-redo",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
+        "key": "ctrl+y",
+        "command": "-redo",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
       }
     ],
     "configuration": {
