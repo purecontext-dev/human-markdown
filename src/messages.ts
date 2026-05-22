@@ -10,6 +10,8 @@ export type ExtensionToWebviewMessage =
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
+  | { type: 'save-success' }
+  | { type: 'save-failed' }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }

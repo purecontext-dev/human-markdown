@@ -233,9 +233,19 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         }
         case 'save': {
           const doSave = () => {
-            document.save().then(() => {
-              baseContent = document.getText()
-            })
+            document.save().then(
+              (saved) => {
+                if (saved || !document.isDirty) {
+                  baseContent = document.getText()
+                  this.postMessage(webview, { type: 'save-success' })
+                } else {
+                  this.postMessage(webview, { type: 'save-failed' })
+                }
+              },
+              () => {
+                this.postMessage(webview, { type: 'save-failed' })
+              },
+            )
           }
           if (msg.content !== document.getText()) {
             suppressNextSync = true
@@ -252,6 +262,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
               },
               () => {
                 suppressNextSync = false
+                this.postMessage(webview, { type: 'save-failed' })
               },
             )
           } else {

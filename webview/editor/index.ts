@@ -35,6 +35,7 @@ import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
 import { minimalChange } from './minimal-change'
+import { SaveController } from './save-controller'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
 
@@ -62,6 +63,8 @@ type ExtensionMessage =
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
+  | { type: 'save-success' }
+  | { type: 'save-failed' }
 
 const vscode = acquireVsCodeApi()
 
@@ -333,6 +336,26 @@ function renderFallback(root: HTMLElement, content: string, err: unknown) {
   root.appendChild(pre)
 }
 
+function showSaveError() {
+  const existing = document.querySelector('.save-error')
+  if (existing) existing.remove()
+
+  const el = document.createElement('div')
+  el.className = 'save-error'
+  el.textContent = 'Save failed'
+  document.getElementById('toolbar')?.appendChild(el)
+
+  setTimeout(() => el.remove(), 3000)
+}
+
+const saveController = new SaveController({
+  getCurrentContent: () => currentContent,
+  setDirty,
+  postMessage: (msg) => vscode.postMessage(msg),
+  hideConflict: () => conflictBar.hide(),
+  showError: showSaveError,
+})
+
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 function saveScrollState() {
@@ -387,6 +410,12 @@ window.addEventListener('message', (event) => {
       }
       break
     }
+    case 'save-success':
+      saveController.handleSuccess()
+      break
+    case 'save-failed':
+      saveController.handleFailure()
+      break
   }
 })
 
@@ -405,9 +434,7 @@ document.addEventListener(
       else findBar.next()
     } else if (e.key === 's') {
       e.preventDefault()
-      setDirty(false)
-      conflictBar.hide()
-      vscode.postMessage({ type: 'save', content: currentContent })
+      saveController.initiateSave()
     }
   },
   true,
