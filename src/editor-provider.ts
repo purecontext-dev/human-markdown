@@ -98,6 +98,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     let suppressNextSync = false
     let webviewIsDirty = false
+    let isSaving = false
     let baseContent = document.getText()
 
     const tryMergeExternal = (diskContent: string): boolean => {
@@ -233,16 +234,17 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         }
         case 'save': {
           const doSave = () => {
+            isSaving = true
             document.save().then(
               (saved) => {
+                isSaving = false
                 if (saved || !document.isDirty) {
                   baseContent = document.getText()
-                  this.postMessage(webview, { type: 'save-success' })
-                } else {
-                  this.postMessage(webview, { type: 'save-failed' })
                 }
+                this.postMessage(webview, { type: 'save-success' })
               },
               () => {
+                isSaving = false
                 this.postMessage(webview, { type: 'save-failed' })
               },
             )
@@ -293,7 +295,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       new vscode.RelativePattern(docDir, docBasename),
     )
     const onFileChange = fileWatcher.onDidChange(async () => {
-      if (!webviewIsDirty) return
+      if (!webviewIsDirty || isSaving) return
       try {
         const diskBytes = await vscode.workspace.fs.readFile(document.uri)
         const diskContent = new TextDecoder().decode(diskBytes)
