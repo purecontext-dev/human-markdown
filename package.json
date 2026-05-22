@@ -153,7 +153,7 @@
     "@milkdown/kit": "^7.6.0",
     "@milkdown/plugin-listener": "^7.6.0",
     "@milkdown/preset-commonmark": "^7.6.0",
-    "@milkdown/preset-gfm": "^7.6.0",
+    "@milkdown/preset-gfm": "^7.21.1",
     "@milkdown/prose": "^7.6.0",
     "katex": "^0.16.0",
     "mermaid": "^11.15.0",
