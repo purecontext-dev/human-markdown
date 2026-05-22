@@ -211,8 +211,8 @@ const editorCSS = `
 
   .milkdown .code-block-view.word-wrap .code-wrap-toggle {
     opacity: 1;
-    color: var(--hm-color-accent);
-    border-color: var(--hm-color-accent);
+    color: var(--hm-color-link);
+    border-color: var(--hm-color-link);
   }
 
   .milkdown .code-block-view pre {
