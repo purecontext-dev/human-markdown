@@ -220,6 +220,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         case 'resolve-image-uri': {
           const docDir = vscode.Uri.joinPath(document.uri, '..')
           const imageUri = vscode.Uri.joinPath(docDir, msg.src)
+          const resolved = imageUri.fsPath
+          const root = `${docDir.fsPath}/`
+          if (!resolved.startsWith(root) && resolved !== docDir.fsPath) {
+            break
+          }
           const webviewUri = webview.asWebviewUri(imageUri).toString()
           this.postMessage(webview, {
             type: 'image-uri-resolved',

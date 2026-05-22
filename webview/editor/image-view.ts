@@ -4,108 +4,96 @@ import { imageSchema } from '@milkdown/preset-commonmark'
 import type { Node as ProsemirrorNode } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
 
-const uriCache = new Map<string, string>()
-const pendingCallbacks = new Map<string, Set<(uri: string) => void>>()
+export type ImageUriResolver = (src: string) => Promise<string>
+
+const loadedCache = new Map<string, string>()
 
 function isLocalPath(src: string): boolean {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return false
-  if (src.startsWith('data:')) return false
-  return true
+  return !/^[a-z][a-z0-9+.-]*:/i.test(src)
 }
 
-function requestResolve(src: string, callback: (uri: string) => void) {
-  const cached = uriCache.get(src)
-  if (cached) {
-    callback(cached)
-    return
-  }
+export function createImageView(resolve: ImageUriResolver) {
+  return $view(imageSchema.node, (_ctx: Ctx) => {
+    return (node: ProsemirrorNode, _view: EditorView, _getPos: () => number | undefined) => {
+      const attrs = node.attrs as { src: string; alt: string; title: string }
 
-  let callbacks = pendingCallbacks.get(src)
-  if (!callbacks) {
-    callbacks = new Set()
-    pendingCallbacks.set(src, callbacks)
-    const vscode = (window as unknown as { __vscodeApi: { postMessage(msg: unknown): void } })
-      .__vscodeApi
-    vscode.postMessage({ type: 'resolve-image-uri', src })
-  }
-  callbacks.add(callback)
-}
+      const container = document.createElement('span')
+      container.classList.add('image-view')
 
-window.addEventListener('message', (event) => {
-  const msg = event.data
-  if (msg?.type !== 'image-uri-resolved') return
+      const img = document.createElement('img')
+      img.alt = attrs.alt || ''
+      if (attrs.title) img.title = attrs.title
 
-  const { src, webviewUri } = msg as { src: string; webviewUri: string }
-  uriCache.set(src, webviewUri)
+      let generation = 0
+      let currentSrc = ''
 
-  const callbacks = pendingCallbacks.get(src)
-  if (callbacks) {
-    for (const cb of callbacks) cb(webviewUri)
-    pendingCallbacks.delete(src)
-  }
-})
+      function applySrc(src: string) {
+        currentSrc = src
+        generation++
+        const myGen = generation
 
-export const imageView = $view(imageSchema.node, (_ctx: Ctx) => {
-  return (node: ProsemirrorNode, _view: EditorView, _getPos: () => number | undefined) => {
-    const attrs = node.attrs as { src: string; alt: string; title: string }
+        if (!src) {
+          img.removeAttribute('src')
+          img.classList.add('image-broken')
+          img.classList.remove('image-loading')
+          return
+        }
 
-    const container = document.createElement('span')
-    container.classList.add('image-view')
+        if (!isLocalPath(src)) {
+          img.src = src
+          img.classList.remove('image-loading', 'image-broken')
+          return
+        }
 
-    const img = document.createElement('img')
-    img.alt = attrs.alt || ''
-    if (attrs.title) img.title = attrs.title
+        const cached = loadedCache.get(src)
+        if (cached) {
+          img.src = cached
+          img.classList.remove('image-loading', 'image-broken')
+          return
+        }
 
-    if (!attrs.src) {
-      img.classList.add('image-broken')
-    } else if (isLocalPath(attrs.src)) {
-      const cached = uriCache.get(attrs.src)
-      if (cached) {
-        img.src = cached
-      } else {
         img.classList.add('image-loading')
-        requestResolve(attrs.src, (uri) => {
+        img.classList.remove('image-broken')
+        resolve(src).then((uri) => {
+          if (generation !== myGen) return
           img.src = uri
           img.classList.remove('image-loading')
         })
       }
-    } else {
-      img.src = attrs.src
-    }
 
-    container.appendChild(img)
-
-    return {
-      dom: container,
-      update(updatedNode: ProsemirrorNode) {
-        if (updatedNode.type.name !== 'image') return false
-        const newAttrs = updatedNode.attrs as { src: string; alt: string; title: string }
-        img.alt = newAttrs.alt || ''
-        img.title = newAttrs.title || ''
-
-        if (!newAttrs.src) {
-          img.removeAttribute('src')
-          img.classList.add('image-broken')
-          img.classList.remove('image-loading')
-        } else if (isLocalPath(newAttrs.src)) {
-          const cached = uriCache.get(newAttrs.src)
-          if (cached) {
-            img.src = cached
-            img.classList.remove('image-loading', 'image-broken')
-          } else {
-            img.classList.add('image-loading')
-            img.classList.remove('image-broken')
-            requestResolve(newAttrs.src, (uri) => {
-              img.src = uri
-              img.classList.remove('image-loading')
-            })
-          }
-        } else {
-          img.src = newAttrs.src
-          img.classList.remove('image-loading', 'image-broken')
+      img.addEventListener('load', () => {
+        if (currentSrc && isLocalPath(currentSrc)) {
+          loadedCache.set(currentSrc, img.src)
         }
-        return true
-      },
+      })
+
+      img.addEventListener('error', () => {
+        loadedCache.delete(currentSrc)
+        img.classList.add('image-broken')
+        img.classList.remove('image-loading')
+      })
+
+      applySrc(attrs.src)
+      container.appendChild(img)
+
+      return {
+        dom: container,
+        update(updatedNode: ProsemirrorNode) {
+          if (updatedNode.type.name !== 'image') return false
+          const newAttrs = updatedNode.attrs as { src: string; alt: string; title: string }
+          img.alt = newAttrs.alt || ''
+          img.title = newAttrs.title || ''
+          if (newAttrs.src !== currentSrc) {
+            applySrc(newAttrs.src)
+          }
+          return true
+        },
+        destroy() {
+          generation++
+        },
+      }
     }
-  }
-})
+  })
+}
+
+export { isLocalPath, loadedCache }
