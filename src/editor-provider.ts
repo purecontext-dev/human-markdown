@@ -97,7 +97,6 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     this.webviews.add(webview)
 
     let suppressNextSync = false
-    let suppressFileWatcher = false
     let webviewIsDirty = false
     let baseContent = document.getText()
 
@@ -233,19 +232,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'save': {
-          const content = document.getText()
-          suppressFileWatcher = true
-          vscode.workspace.fs.writeFile(document.uri, new TextEncoder().encode(content)).then(
-            () => {
-              baseContent = content
-              suppressFileWatcher = false
-              document.save()
-            },
-            () => {
-              suppressFileWatcher = false
-              document.save()
-            },
-          )
+          document.save().then(() => {
+            baseContent = document.getText()
+          })
           break
         }
       }
@@ -271,7 +260,6 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       new vscode.RelativePattern(docDir, docBasename),
     )
     const onFileChange = fileWatcher.onDidChange(async () => {
-      if (suppressFileWatcher) return
       if (!webviewIsDirty) return
       try {
         const diskBytes = await vscode.workspace.fs.readFile(document.uri)

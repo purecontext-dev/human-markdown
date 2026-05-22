@@ -138,16 +138,18 @@ function setMode(mode: 'preview' | 'raw') {
 
     if (milkdownEditor && cmEditor) {
       const cmContent = cmEditor.state.doc.toString()
-      if (cmContent !== currentContent) {
-        currentContent = cmContent
-        suppressMilkdownUpdate = true
-        try {
-          milkdownEditor.action(replaceAll(cmContent))
-        } catch {
-          // ignore
-        }
-        suppressMilkdownUpdate = false
+      currentContent = cmContent
+      syncingContent = true
+      suppressMilkdownUpdate = true
+      try {
+        milkdownEditor.action(replaceAll(cmContent))
+      } catch {
+        // ignore
       }
+      suppressMilkdownUpdate = false
+      requestAnimationFrame(() => {
+        syncingContent = false
+      })
     }
   } else {
     previewContainer.classList.add('hidden')
