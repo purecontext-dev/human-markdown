@@ -76,6 +76,17 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
     langLabel.classList.add('code-lang')
     container.appendChild(langLabel)
 
+    const wrapBtn = document.createElement('button')
+    wrapBtn.classList.add('code-wrap-toggle')
+    wrapBtn.title = 'Toggle word wrap'
+    wrapBtn.textContent = '↩'
+    wrapBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      container.classList.toggle('word-wrap')
+    })
+    container.appendChild(wrapBtn)
+
     const pre = document.createElement('pre')
     const code = document.createElement('code')
     pre.appendChild(code)
@@ -173,9 +184,11 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         return true
       },
       ignoreMutation(mutation: { target: Node; type: string }) {
+        if (mutation.target === container && mutation.type === 'attributes') return true
         if (rendered && (mutation.target === rendered || rendered.contains(mutation.target)))
           return true
         if (langLabel.contains(mutation.target)) return true
+        if (wrapBtn.contains(mutation.target)) return true
         return false
       },
       destroy() {

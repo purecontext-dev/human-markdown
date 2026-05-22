@@ -157,7 +157,14 @@ const editorCSS = `
     background: none;
     border: none;
     border-radius: 0;
-    overflow: visible;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .milkdown .code-block-view.word-wrap .code-rendered pre {
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 
   .milkdown .code-block-view .code-rendered code {
@@ -181,11 +188,47 @@ const editorCSS = `
     pointer-events: none;
   }
 
+  .milkdown .code-block-view .code-wrap-toggle {
+    position: absolute;
+    bottom: 0.5em;
+    right: 0.5em;
+    font-size: 0.8em;
+    color: var(--hm-color-text-muted);
+    background: var(--hm-color-bg-secondary);
+    border: 1px solid var(--hm-color-border);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    z-index: 3;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    line-height: 1;
+  }
+
+  .milkdown .code-block-view:hover .code-wrap-toggle {
+    opacity: 1;
+  }
+
+  .milkdown .code-block-view.word-wrap .code-wrap-toggle {
+    opacity: 1;
+    color: var(--hm-color-accent);
+    border-color: var(--hm-color-accent);
+  }
+
   .milkdown .code-block-view pre {
     margin: 0;
   }
 
+  .milkdown .code-block-view.word-wrap > pre {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
   .milkdown .code-block-view.is-mermaid pre {
+    display: none;
+  }
+
+  .milkdown .code-block-view.is-mermaid .code-wrap-toggle {
     display: none;
   }
 
