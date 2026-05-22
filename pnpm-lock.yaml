@@ -37,7 +37,7 @@ importers:
         version: 7.21.0
       '@milkdown/kit':
         specifier: ^7.6.0
-        version: 7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@5.9.3)
+        version: 7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@6.0.3)
       '@milkdown/plugin-listener':
         specifier: ^7.6.0
         version: 7.20.0
@@ -103,8 +103,8 @@ importers:
         specifier: ^11.0.0
         version: 11.0.0
       typescript:
-        specifier: ^5.6.0
-        version: 5.9.3
+        specifier: ^6.0.3
+        version: 6.0.3
       unified:
         specifier: ^11.0.5
         version: 11.0.5
@@ -3077,8 +3077,8 @@ packages:
   typed-rest-client@1.8.11:
     resolution: {integrity: sha512-5UvfMpd1oelmUPRbbaVnq+rHP7ng2cE4qoQkQeAqxRL6PklkxsM0g32/HL0yfvruK6ojQ5x8EE+HF4YV6DtuCA==}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -3824,7 +3824,7 @@ snapshots:
     dependencies:
       '@chevrotain/types': 11.1.2
 
-  '@milkdown/components@7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@5.9.3)':
+  '@milkdown/components@7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@6.0.3)':
     dependencies:
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
@@ -3845,7 +3845,7 @@ snapshots:
       lodash-es: 4.18.1
       nanoid: 5.1.11
       unist-util-visit: 5.1.0
-      vue: 3.5.34(typescript@5.9.3)
+      vue: 3.5.34(typescript@6.0.3)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -3874,9 +3874,9 @@ snapshots:
 
   '@milkdown/exception@7.21.0': {}
 
-  '@milkdown/kit@7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@5.9.3)':
+  '@milkdown/kit@7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@6.0.3)':
     dependencies:
-      '@milkdown/components': 7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@5.9.3)
+      '@milkdown/components': 7.20.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.42.1)(typescript@6.0.3)
       '@milkdown/core': 7.20.0
       '@milkdown/ctx': 7.20.0
       '@milkdown/plugin-block': 7.20.0
@@ -4715,11 +4715,11 @@ snapshots:
       '@vue/shared': 3.5.34
       csstype: 3.2.3
 
-  '@vue/server-renderer@3.5.34(vue@3.5.34(typescript@5.9.3))':
+  '@vue/server-renderer@3.5.34(vue@3.5.34(typescript@6.0.3))':
     dependencies:
       '@vue/compiler-ssr': 3.5.34
       '@vue/shared': 3.5.34
-      vue: 3.5.34(typescript@5.9.3)
+      vue: 3.5.34(typescript@6.0.3)
 
   '@vue/shared@3.5.34': {}
 
@@ -6896,7 +6896,7 @@ snapshots:
       tunnel: 0.0.6
       underscore: 1.13.8
 
-  typescript@5.9.3: {}
+  typescript@6.0.3: {}
 
   uc.micro@2.1.0: {}
 
@@ -7039,15 +7039,15 @@ snapshots:
       - supports-color
       - terser
 
-  vue@3.5.34(typescript@5.9.3):
+  vue@3.5.34(typescript@6.0.3):
     dependencies:
       '@vue/compiler-dom': 3.5.34
       '@vue/compiler-sfc': 3.5.34
       '@vue/runtime-dom': 3.5.34
-      '@vue/server-renderer': 3.5.34(vue@3.5.34(typescript@5.9.3))
+      '@vue/server-renderer': 3.5.34(vue@3.5.34(typescript@6.0.3))
       '@vue/shared': 3.5.34
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   w3c-keyname@2.2.8: {}
 
