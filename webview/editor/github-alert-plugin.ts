@@ -159,10 +159,25 @@ export const githubAlertSchema = $nodeSchema('github_alert', () => ({
     runner: (state, node) => {
       const alertType = (node.attrs.alertType as string).toUpperCase()
       state.openNode('blockquote')
-      state.openNode('paragraph')
-      state.addNode('text', undefined, `[!${alertType}]`)
-      state.closeNode()
-      state.next(node.content)
+
+      const firstChild = node.content.firstChild
+      if (firstChild && firstChild.type.name === 'paragraph') {
+        state.openNode('paragraph')
+        state.addNode('text', undefined, `[!${alertType}]\n`)
+        state.next(firstChild.content)
+        state.closeNode()
+
+        if (node.content.childCount > 1) {
+          const remaining = node.content.cut(firstChild.nodeSize)
+          state.next(remaining)
+        }
+      } else {
+        state.openNode('paragraph')
+        state.addNode('text', undefined, `[!${alertType}]`)
+        state.closeNode()
+        state.next(node.content)
+      }
+
       state.closeNode()
     },
   },
