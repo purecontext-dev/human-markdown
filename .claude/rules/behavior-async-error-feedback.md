@@ -1,0 +1,3 @@
+# Async Error Feedback
+
+When a user-triggered action calls an async API (clipboard write, file save, apply edit) and the UI provides success feedback (checkmark, state change, dialog dismissal), the failure path must also provide feedback. An empty rejection handler `() => {}` or a missing `.catch()` is never acceptable on user-facing async operations. At minimum: show a brief error indicator on the originating UI element and log the rejection reason. If the success path changes UI state (hides a dialog, shows a checkmark), the failure path must either leave the UI unchanged or show an explicit error state — never silently swallow.

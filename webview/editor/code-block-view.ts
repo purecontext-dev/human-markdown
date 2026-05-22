@@ -93,7 +93,14 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
             copyBtn.classList.remove('copied')
           }, 1500)
         },
-        () => {},
+        () => {
+          copyBtn.textContent = '✗'
+          copyBtn.classList.add('copy-failed')
+          setTimeout(() => {
+            copyBtn.textContent = '⎘'
+            copyBtn.classList.remove('copy-failed')
+          }, 1500)
+        },
       )
     })
     header.appendChild(copyBtn)

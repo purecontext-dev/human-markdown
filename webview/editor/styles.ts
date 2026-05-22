@@ -217,6 +217,12 @@ const editorCSS = `
     opacity: 1;
   }
 
+  .milkdown .code-block-view .code-copy.copy-failed {
+    color: #f48771;
+    border-color: #f48771;
+    opacity: 1;
+  }
+
   .milkdown .code-block-view.is-mermaid .code-copy {
     display: none;
   }
