@@ -35,6 +35,7 @@ import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
 import { minimalChange } from './minimal-change'
+import { SaveController } from './save-controller'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
 
@@ -75,7 +76,6 @@ let suppressCmUpdate = false
 let syncingContent = true
 let currentMode: 'preview' | 'raw' = 'preview'
 let webviewDirty = false
-let pendingSaveContent: string | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -348,6 +348,14 @@ function showSaveError() {
   setTimeout(() => el.remove(), 3000)
 }
 
+const saveController = new SaveController({
+  getCurrentContent: () => currentContent,
+  setDirty,
+  postMessage: (msg) => vscode.postMessage(msg),
+  hideConflict: () => conflictBar.hide(),
+  showError: showSaveError,
+})
+
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 function saveScrollState() {
@@ -402,19 +410,12 @@ window.addEventListener('message', (event) => {
       }
       break
     }
-    case 'save-success': {
-      if (pendingSaveContent !== null && currentContent === pendingSaveContent) {
-        setDirty(false)
-        conflictBar.hide()
-      }
-      pendingSaveContent = null
+    case 'save-success':
+      saveController.handleSuccess()
       break
-    }
-    case 'save-failed': {
-      pendingSaveContent = null
-      showSaveError()
+    case 'save-failed':
+      saveController.handleFailure()
       break
-    }
   }
 })
 
@@ -433,8 +434,7 @@ document.addEventListener(
       else findBar.next()
     } else if (e.key === 's') {
       e.preventDefault()
-      pendingSaveContent = currentContent
-      vscode.postMessage({ type: 'save', content: currentContent })
+      saveController.initiateSave()
     }
   },
   true,

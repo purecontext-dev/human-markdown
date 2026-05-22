@@ -235,7 +235,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           const doSave = () => {
             document.save().then(
               (saved) => {
-                if (saved) {
+                if (saved || !document.isDirty) {
                   baseContent = document.getText()
                   this.postMessage(webview, { type: 'save-success' })
                 } else {
