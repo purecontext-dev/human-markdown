@@ -76,6 +76,8 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
     header.classList.add('code-header')
     container.appendChild(header)
 
+    let resetTimer: ReturnType<typeof setTimeout> | null = null
+
     const copyBtn = document.createElement('button')
     copyBtn.classList.add('code-copy')
     copyBtn.title = 'Copy code'
@@ -84,21 +86,26 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
       e.preventDefault()
       e.stopPropagation()
       const text = code.textContent ?? ''
+      if (resetTimer) clearTimeout(resetTimer)
       navigator.clipboard.writeText(text).then(
         () => {
           copyBtn.textContent = '✓'
           copyBtn.classList.add('copied')
-          setTimeout(() => {
+          copyBtn.classList.remove('copy-failed')
+          resetTimer = setTimeout(() => {
             copyBtn.textContent = '⎘'
             copyBtn.classList.remove('copied')
+            resetTimer = null
           }, 1500)
         },
         () => {
           copyBtn.textContent = '✗'
           copyBtn.classList.add('copy-failed')
-          setTimeout(() => {
+          copyBtn.classList.remove('copied')
+          resetTimer = setTimeout(() => {
             copyBtn.textContent = '⎘'
             copyBtn.classList.remove('copy-failed')
+            resetTimer = null
           }, 1500)
         },
       )
@@ -225,6 +232,7 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         return false
       },
       destroy() {
+        if (resetTimer) clearTimeout(resetTimer)
         window.removeEventListener('theme-changed', onThemeChanged)
         if (isMermaid) unobserveBlock(container)
       },
