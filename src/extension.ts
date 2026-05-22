@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {}
 
-function offerReopenMarkdownFiles(context: vscode.ExtensionContext) {
+export function offerReopenMarkdownFiles(context: vscode.ExtensionContext) {
   const key = 'hasOfferedReopen'
   const versionKey = 'installedVersion'
   const currentVersion = context.extension.packageJSON.version
@@ -24,16 +24,21 @@ function offerReopenMarkdownFiles(context: vscode.ExtensionContext) {
 
   context.globalState.update(versionKey, currentVersion)
 
-  const markdownEditors = vscode.window.tabGroups.all
+  const markdownTabs = vscode.window.tabGroups.all
     .flatMap((group) => group.tabs)
-    .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.path.endsWith('.md'))
+    .filter(
+      (tab): tab is vscode.Tab & { input: vscode.TabInputText } =>
+        tab.input instanceof vscode.TabInputText && tab.input.uri.path.endsWith('.md'),
+    )
 
-  if (markdownEditors.length === 0) {
+  if (markdownTabs.length === 0) {
     context.globalState.update(key, true)
     return
   }
 
-  const uris = markdownEditors.map((tab) => (tab.input as vscode.TabInputText).uri)
+  const uris = markdownTabs.map((tab) => tab.input.uri)
+
+  context.globalState.update(key, true)
 
   vscode.window
     .showInformationMessage(
@@ -42,7 +47,6 @@ function offerReopenMarkdownFiles(context: vscode.ExtensionContext) {
       'No',
     )
     .then((choice) => {
-      context.globalState.update(key, true)
       if (choice !== 'Yes') return
       for (const uri of uris) {
         vscode.commands.executeCommand('vscode.openWith', uri, MarkdownEditorProvider.viewType)
