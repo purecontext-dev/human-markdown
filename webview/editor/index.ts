@@ -1,3 +1,4 @@
+import { Transaction } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import {
   Editor,
@@ -170,6 +171,7 @@ function setMode(mode: 'preview' | 'raw') {
         suppressCmUpdate = true
         cmEditor.dispatch({
           changes: { from: 0, to: cmContent.length, insert: currentContent },
+          annotations: Transaction.addToHistory.of(false),
         })
         suppressCmUpdate = false
       }
@@ -298,6 +300,7 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
       suppressCmUpdate = true
       cmEditor.dispatch({
         changes: { from: 0, to: cmContent.length, insert: content },
+        annotations: Transaction.addToHistory.of(false),
       })
       suppressCmUpdate = false
     }
