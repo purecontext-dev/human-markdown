@@ -420,7 +420,7 @@ document.addEventListener(
       e.preventDefault()
       setDirty(false)
       conflictBar.hide()
-      vscode.postMessage({ type: 'save' })
+      vscode.postMessage({ type: 'save', content: currentContent })
     }
   },
   true,
