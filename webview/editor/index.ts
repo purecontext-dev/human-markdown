@@ -89,6 +89,20 @@ const findBar = new FindBar(document.body, () => {
   return currentMode === 'preview' ? domBackend : cmBackend
 })
 
+function minimalChange(
+  oldStr: string,
+  newStr: string,
+): { from: number; to: number; insert: string } | null {
+  if (oldStr === newStr) return null
+  let pre = 0
+  const min = Math.min(oldStr.length, newStr.length)
+  while (pre < min && oldStr[pre] === newStr[pre]) pre++
+  let suf = 0
+  while (suf < min - pre && oldStr[oldStr.length - 1 - suf] === newStr[newStr.length - 1 - suf])
+    suf++
+  return { from: pre, to: oldStr.length - suf, insert: newStr.slice(pre, newStr.length - suf) }
+}
+
 function setDirty(dirty: boolean) {
   if (dirty === webviewDirty) return
   webviewDirty = dirty
@@ -167,10 +181,11 @@ function setMode(mode: 'preview' | 'raw') {
       })
     } else {
       const cmContent = cmEditor.state.doc.toString()
-      if (cmContent !== currentContent) {
+      const change = minimalChange(cmContent, currentContent)
+      if (change) {
         suppressCmUpdate = true
         cmEditor.dispatch({
-          changes: { from: 0, to: cmContent.length, insert: currentContent },
+          changes: change,
           annotations: Transaction.addToHistory.of(false),
         })
         suppressCmUpdate = false
@@ -296,10 +311,11 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
 
   if (cmEditor) {
     const cmContent = cmEditor.state.doc.toString()
-    if (cmContent !== content) {
+    const change = minimalChange(cmContent, content)
+    if (change) {
       suppressCmUpdate = true
       cmEditor.dispatch({
-        changes: { from: 0, to: cmContent.length, insert: content },
+        changes: change,
         annotations: Transaction.addToHistory.of(false),
       })
       suppressCmUpdate = false
