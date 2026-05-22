@@ -72,9 +72,49 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
     const container = document.createElement('div')
     container.classList.add('code-block-view')
 
+    const header = document.createElement('div')
+    header.classList.add('code-header')
+    container.appendChild(header)
+
+    let resetTimer: ReturnType<typeof setTimeout> | null = null
+
+    const copyBtn = document.createElement('button')
+    copyBtn.classList.add('code-copy')
+    copyBtn.title = 'Copy code'
+    copyBtn.textContent = '⎘'
+    copyBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const text = code.textContent ?? ''
+      if (resetTimer) clearTimeout(resetTimer)
+      navigator.clipboard.writeText(text).then(
+        () => {
+          copyBtn.textContent = '✓'
+          copyBtn.classList.add('copied')
+          copyBtn.classList.remove('copy-failed')
+          resetTimer = setTimeout(() => {
+            copyBtn.textContent = '⎘'
+            copyBtn.classList.remove('copied')
+            resetTimer = null
+          }, 1500)
+        },
+        () => {
+          copyBtn.textContent = '✗'
+          copyBtn.classList.add('copy-failed')
+          copyBtn.classList.remove('copied')
+          resetTimer = setTimeout(() => {
+            copyBtn.textContent = '⎘'
+            copyBtn.classList.remove('copy-failed')
+            resetTimer = null
+          }, 1500)
+        },
+      )
+    })
+    header.appendChild(copyBtn)
+
     const langLabel = document.createElement('span')
     langLabel.classList.add('code-lang')
-    container.appendChild(langLabel)
+    header.appendChild(langLabel)
 
     const wrapBtn = document.createElement('button')
     wrapBtn.classList.add('code-wrap-toggle')
@@ -187,11 +227,12 @@ export const codeBlockView = $view(codeBlockSchema.node, (_ctx: Ctx) => {
         if (mutation.target === container && mutation.type === 'attributes') return true
         if (rendered && (mutation.target === rendered || rendered.contains(mutation.target)))
           return true
-        if (langLabel.contains(mutation.target)) return true
+        if (header.contains(mutation.target)) return true
         if (wrapBtn.contains(mutation.target)) return true
         return false
       },
       destroy() {
+        if (resetTimer) clearTimeout(resetTimer)
         window.removeEventListener('theme-changed', onThemeChanged)
         if (isMermaid) unobserveBlock(container)
       },
