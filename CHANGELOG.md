@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-05-21
+
+- GitHub-style alert blocks (NOTE, TIP, IMPORTANT, WARNING, CAUTION) rendered in WYSIWYG mode
+- Local images rendered in WYSIWYG mode via webview URI resolution
+- Code blocks now support horizontal scrolling with a wrap toggle
+- Fixed undo/redo behavior after mode toggle — external CodeMirror updates no longer create spurious undo entries
+- Fixed alert stringify timing crash for github_alert nodes
+- Updated Milkdown to 7.21, Shiki to 4.x, TypeScript to 6.0
+
 ## 0.2.1 - 2026-05-21
 
 - Increased paragraph spacing in WYSIWYG mode to match standard rendered markdown
