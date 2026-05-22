@@ -29,6 +29,7 @@ import {
   patchRemarkForGithubAlerts,
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
+import { imageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
@@ -58,8 +59,10 @@ type ExtensionMessage =
   | { type: 'toggle-mode' }
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
+  | { type: 'image-uri-resolved'; src: string; webviewUri: string }
 
 const vscode = acquireVsCodeApi()
+;(window as unknown as Record<string, unknown>).__vscodeApi = vscode
 
 let milkdownEditor: Editor | null = null
 let cmEditor: EditorView | null = null
@@ -235,6 +238,7 @@ async function initMilkdown(content: string) {
       .use(mathInlineView)
       .use(listener)
       .use(codeBlockView)
+      .use(imageView)
       .use(keyboardNavPlugin)
       .use(taskListTogglePlugin)
       .create()

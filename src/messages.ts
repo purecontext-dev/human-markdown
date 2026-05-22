@@ -9,6 +9,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'toggle-mode' }
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
+  | { type: 'image-uri-resolved'; src: string; webviewUri: string }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }
@@ -18,6 +19,7 @@ export type WebviewToExtensionMessage =
   | { type: 'keep-mine'; content: string }
   | { type: 'save-state'; state: WebviewState }
   | { type: 'open-link'; href: string }
+  | { type: 'resolve-image-uri'; src: string }
   | { type: 'save' }
 
 export interface WebviewState {
