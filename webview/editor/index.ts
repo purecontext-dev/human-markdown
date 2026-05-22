@@ -62,6 +62,8 @@ type ExtensionMessage =
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
+  | { type: 'save-success' }
+  | { type: 'save-failed' }
 
 const vscode = acquireVsCodeApi()
 
@@ -73,6 +75,7 @@ let suppressCmUpdate = false
 let syncingContent = true
 let currentMode: 'preview' | 'raw' = 'preview'
 let webviewDirty = false
+let pendingSaveContent: string | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -333,6 +336,18 @@ function renderFallback(root: HTMLElement, content: string, err: unknown) {
   root.appendChild(pre)
 }
 
+function showSaveError() {
+  const existing = document.querySelector('.save-error')
+  if (existing) existing.remove()
+
+  const el = document.createElement('div')
+  el.className = 'save-error'
+  el.textContent = 'Save failed'
+  document.getElementById('toolbar')?.appendChild(el)
+
+  setTimeout(() => el.remove(), 3000)
+}
+
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 function saveScrollState() {
@@ -387,6 +402,19 @@ window.addEventListener('message', (event) => {
       }
       break
     }
+    case 'save-success': {
+      if (pendingSaveContent !== null && currentContent === pendingSaveContent) {
+        setDirty(false)
+        conflictBar.hide()
+      }
+      pendingSaveContent = null
+      break
+    }
+    case 'save-failed': {
+      pendingSaveContent = null
+      showSaveError()
+      break
+    }
   }
 })
 
@@ -405,8 +433,7 @@ document.addEventListener(
       else findBar.next()
     } else if (e.key === 's') {
       e.preventDefault()
-      setDirty(false)
-      conflictBar.hide()
+      pendingSaveContent = currentContent
       vscode.postMessage({ type: 'save', content: currentContent })
     }
   },

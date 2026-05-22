@@ -211,6 +211,26 @@ body {
   background: var(--vscode-button-secondaryHoverBackground, #45494e);
 }
 
+/* Save error indicator */
+.save-error {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  color: var(--vscode-errorForeground, #f48771);
+  animation: save-error-fade 3s ease-in forwards;
+}
+
+@keyframes save-error-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 ::highlight(hm-search-results) {
   background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
 }
