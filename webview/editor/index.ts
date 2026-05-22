@@ -29,6 +29,7 @@ import {
   patchRemarkForGithubAlerts,
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
+import { createImageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
@@ -58,6 +59,7 @@ type ExtensionMessage =
   | { type: 'toggle-mode' }
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
+  | { type: 'image-uri-resolved'; src: string; webviewUri: string }
 
 const vscode = acquireVsCodeApi()
 
@@ -102,6 +104,20 @@ const conflictBar = new ConflictBar(
     setDirty(false)
   },
 )
+
+const pendingImageResolves = new Map<string, Array<(uri: string) => void>>()
+
+function resolveImageUri(src: string): Promise<string> {
+  return new Promise((resolve) => {
+    const pending = pendingImageResolves.get(src)
+    if (pending) {
+      pending.push(resolve)
+      return
+    }
+    pendingImageResolves.set(src, [resolve])
+    vscode.postMessage({ type: 'resolve-image-uri', src })
+  })
+}
 
 injectEditorStyles()
 
@@ -235,6 +251,7 @@ async function initMilkdown(content: string) {
       .use(mathInlineView)
       .use(listener)
       .use(codeBlockView)
+      .use(createImageView(resolveImageUri))
       .use(keyboardNavPlugin)
       .use(taskListTogglePlugin)
       .create()
@@ -354,6 +371,14 @@ window.addEventListener('message', (event) => {
     case 'show-find':
       findBar.show()
       break
+    case 'image-uri-resolved': {
+      const callbacks = pendingImageResolves.get(msg.src)
+      if (callbacks) {
+        for (const cb of callbacks) cb(msg.webviewUri)
+        pendingImageResolves.delete(msg.src)
+      }
+      break
+    }
   }
 })
 

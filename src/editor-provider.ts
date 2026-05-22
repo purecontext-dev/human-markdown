@@ -83,7 +83,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const webview = webviewPanel.webview
     webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'dist')],
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.context.extensionUri, 'dist'),
+        vscode.Uri.joinPath(document.uri, '..'),
+      ],
     }
 
     const defaultMode = vscode.workspace
@@ -212,6 +215,21 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             const targetUri = vscode.Uri.joinPath(docDir, href)
             vscode.commands.executeCommand('vscode.open', targetUri)
           }
+          break
+        }
+        case 'resolve-image-uri': {
+          const docDir = vscode.Uri.joinPath(document.uri, '..')
+          const imageUri = vscode.Uri.joinPath(docDir, msg.src)
+          const relative = path.relative(docDir.fsPath, imageUri.fsPath)
+          if (relative.startsWith('..') || path.isAbsolute(relative)) {
+            break
+          }
+          const webviewUri = webview.asWebviewUri(imageUri).toString()
+          this.postMessage(webview, {
+            type: 'image-uri-resolved',
+            src: msg.src,
+            webviewUri,
+          })
           break
         }
         case 'save': {
