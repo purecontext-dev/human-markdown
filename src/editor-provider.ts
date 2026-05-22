@@ -232,9 +232,31 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'save': {
-          document.save().then(() => {
-            baseContent = document.getText()
-          })
+          const doSave = () => {
+            document.save().then(() => {
+              baseContent = document.getText()
+            })
+          }
+          if (msg.content !== document.getText()) {
+            suppressNextSync = true
+            const edit = new vscode.WorkspaceEdit()
+            const fullRange = new vscode.Range(
+              document.positionAt(0),
+              document.positionAt(document.getText().length),
+            )
+            edit.replace(document.uri, fullRange, msg.content)
+            vscode.workspace.applyEdit(edit).then(
+              () => {
+                suppressNextSync = false
+                doSave()
+              },
+              () => {
+                suppressNextSync = false
+              },
+            )
+          } else {
+            doSave()
+          }
           break
         }
       }

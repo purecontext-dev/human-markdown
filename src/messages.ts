@@ -20,7 +20,7 @@ export type WebviewToExtensionMessage =
   | { type: 'save-state'; state: WebviewState }
   | { type: 'open-link'; href: string }
   | { type: 'resolve-image-uri'; src: string }
-  | { type: 'save' }
+  | { type: 'save'; content: string }
 
 export interface WebviewState {
   scrollTop: number

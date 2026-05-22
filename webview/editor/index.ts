@@ -1,3 +1,4 @@
+import { Transaction } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import {
   Editor,
@@ -33,6 +34,7 @@ import { createImageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
+import { minimalChange } from './minimal-change'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
 
@@ -166,10 +168,12 @@ function setMode(mode: 'preview' | 'raw') {
       })
     } else {
       const cmContent = cmEditor.state.doc.toString()
-      if (cmContent !== currentContent) {
+      const change = minimalChange(cmContent, currentContent)
+      if (change) {
         suppressCmUpdate = true
         cmEditor.dispatch({
-          changes: { from: 0, to: cmContent.length, insert: currentContent },
+          changes: change,
+          annotations: Transaction.addToHistory.of(false),
         })
         suppressCmUpdate = false
       }
@@ -232,8 +236,8 @@ async function initMilkdown(content: string) {
           rule: '-',
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
-          currentContent = markdown
           if (suppressMilkdownUpdate || syncingContent) return
+          currentContent = markdown
           setDirty(true)
           vscode.postMessage({ type: 'edit', content: markdown })
         })
@@ -294,10 +298,12 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
 
   if (cmEditor) {
     const cmContent = cmEditor.state.doc.toString()
-    if (cmContent !== content) {
+    const change = minimalChange(cmContent, content)
+    if (change) {
       suppressCmUpdate = true
       cmEditor.dispatch({
-        changes: { from: 0, to: cmContent.length, insert: content },
+        changes: change,
+        annotations: Transaction.addToHistory.of(false),
       })
       suppressCmUpdate = false
     }
@@ -401,7 +407,7 @@ document.addEventListener(
       e.preventDefault()
       setDirty(false)
       conflictBar.hide()
-      vscode.postMessage({ type: 'save' })
+      vscode.postMessage({ type: 'save', content: currentContent })
     }
   },
   true,
