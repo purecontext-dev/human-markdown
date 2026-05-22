@@ -164,7 +164,10 @@ export const themes: Record<Exclude<ThemeName, 'auto'>, ThemeTokens> = {
   github: githubTheme,
 }
 
-export function applyTheme(tokens: ThemeTokens, root: HTMLElement) {
+export function applyTheme(
+  tokens: ThemeTokens,
+  root: { style: { setProperty(property: string, value: string): void } },
+) {
   for (const [property, value] of Object.entries(tokens)) {
     root.style.setProperty(property, value)
   }
