@@ -10,6 +10,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
   private readonly savedStates = new Map<string, { scrollTop: number; mode: 'preview' | 'raw' }>()
   private readonly webviews = new Set<vscode.Webview>()
+  private activeWebview: vscode.Webview | null = null
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -23,14 +24,14 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     )
 
     const toggleCommand = vscode.commands.registerCommand('humanMarkdown.toggle', () => {
-      for (const webview of provider.webviews) {
-        provider.postMessage(webview, { type: 'toggle-mode' })
+      if (provider.activeWebview) {
+        provider.postMessage(provider.activeWebview, { type: 'toggle-mode' })
       }
     })
 
     const findCommand = vscode.commands.registerCommand('humanMarkdown.find', () => {
-      for (const webview of provider.webviews) {
-        provider.postMessage(webview, { type: 'show-find' })
+      if (provider.activeWebview) {
+        provider.postMessage(provider.activeWebview, { type: 'show-find' })
       }
     })
 
@@ -95,8 +96,13 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     webview.html = this.getHtmlForWebview(webview)
     this.webviews.add(webview)
+    if (webviewPanel.active) this.activeWebview = webview
+    webviewPanel.onDidChangeViewState(() => {
+      if (webviewPanel.active) this.activeWebview = webview
+      else if (this.activeWebview === webview) this.activeWebview = null
+    })
 
-    let suppressNextSync = false
+    let suppressDepth = 0
     let webviewIsDirty = false
     let isSaving = false
     let baseContent = document.getText()
@@ -104,7 +110,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const tryMergeExternal = (diskContent: string): boolean => {
       const result = threeWayMerge(baseContent, document.getText(), diskContent)
       if (result.conflict) return false
-      suppressNextSync = true
+      suppressDepth++
       const edit = new vscode.WorkspaceEdit()
       const fullRange = new vscode.Range(
         document.positionAt(0),
@@ -113,31 +119,39 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       edit.replace(document.uri, fullRange, result.merged)
       vscode.workspace.applyEdit(edit).then(
         () => {
-          baseContent = diskContent
-          suppressNextSync = false
+          baseContent = result.merged
+          suppressDepth--
           this.postMessage(webview, { type: 'merge-update', content: result.merged })
         },
         () => {
-          suppressNextSync = false
+          suppressDepth--
           this.postMessage(webview, { type: 'external-change' })
         },
       )
       return true
     }
 
-    const applyWebviewEdit = (content: string) => {
-      if (content === document.getText()) return
-      suppressNextSync = true
+    const applyWebviewEdit = (content: string, onSuccess?: () => void) => {
+      if (content === document.getText()) {
+        onSuccess?.()
+        return
+      }
+      suppressDepth++
       const edit = new vscode.WorkspaceEdit()
       const fullRange = new vscode.Range(
         document.positionAt(0),
         document.positionAt(document.getText().length),
       )
       edit.replace(document.uri, fullRange, content)
-      const reset = () => {
-        suppressNextSync = false
-      }
-      vscode.workspace.applyEdit(edit).then(reset, reset)
+      vscode.workspace.applyEdit(edit).then(
+        () => {
+          suppressDepth--
+          onSuccess?.()
+        },
+        () => {
+          suppressDepth--
+        },
+      )
     }
 
     const onMessage = webview.onDidReceiveMessage((msg: WebviewToExtensionMessage) => {
@@ -171,7 +185,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           vscode.workspace.fs.readFile(document.uri).then(
             (bytes) => {
               const diskContent = new TextDecoder().decode(bytes)
-              suppressNextSync = true
+              suppressDepth++
               const edit = new vscode.WorkspaceEdit()
               const fullRange = new vscode.Range(
                 document.positionAt(0),
@@ -182,11 +196,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
                 () => {
                   baseContent = diskContent
                   webviewIsDirty = false
-                  suppressNextSync = false
+                  suppressDepth--
                   this.postMessage(webview, { type: 'update', content: diskContent })
                 },
                 () => {
-                  suppressNextSync = false
+                  suppressDepth--
                   this.postMessage(webview, { type: 'external-change' })
                 },
               )
@@ -198,8 +212,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'keep-mine': {
-          webviewIsDirty = false
-          applyWebviewEdit(msg.content)
+          applyWebviewEdit(msg.content, () => {
+            webviewIsDirty = false
+          })
           break
         }
         case 'save-state': {
@@ -235,11 +250,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         case 'save': {
           const doSave = () => {
             isSaving = true
+            const contentBeforeSave = document.getText()
             document.save().then(
               (saved) => {
                 isSaving = false
                 if (saved || !document.isDirty) {
-                  baseContent = document.getText()
+                  baseContent = contentBeforeSave
                 }
                 this.postMessage(webview, { type: 'save-success' })
               },
@@ -250,7 +266,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             )
           }
           if (msg.content !== document.getText()) {
-            suppressNextSync = true
+            suppressDepth++
             const edit = new vscode.WorkspaceEdit()
             const fullRange = new vscode.Range(
               document.positionAt(0),
@@ -259,11 +275,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             edit.replace(document.uri, fullRange, msg.content)
             vscode.workspace.applyEdit(edit).then(
               () => {
-                suppressNextSync = false
+                suppressDepth--
                 doSave()
               },
               () => {
-                suppressNextSync = false
+                suppressDepth--
                 this.postMessage(webview, { type: 'save-failed' })
               },
             )
@@ -277,7 +293,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     const onDocChange = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return
-      if (suppressNextSync) return
+      if (suppressDepth > 0) return
       const newContent = document.getText()
       if (webviewIsDirty) {
         if (!tryMergeExternal(newContent)) {
@@ -295,7 +311,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       new vscode.RelativePattern(docDir, docBasename),
     )
     const onFileChange = fileWatcher.onDidChange(async () => {
-      if (!webviewIsDirty || isSaving) return
+      if (suppressDepth > 0 || !webviewIsDirty || isSaving) return
       try {
         const diskBytes = await vscode.workspace.fs.readFile(document.uri)
         const diskContent = new TextDecoder().decode(diskBytes)

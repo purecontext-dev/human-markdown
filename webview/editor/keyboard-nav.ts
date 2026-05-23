@@ -14,11 +14,9 @@ export const keyboardNavPlugin = $prose((_ctx: Ctx) => {
           return handleEscape(view)
         }
         if (event.key === 'Tab') {
-          event.preventDefault()
-          if (event.shiftKey) {
-            return moveToPreviousBlock(view)
-          }
-          return moveToNextBlock(view)
+          const moved = event.shiftKey ? moveToPreviousBlock(view) : moveToNextBlock(view)
+          if (moved) event.preventDefault()
+          return moved
         }
         return false
       },

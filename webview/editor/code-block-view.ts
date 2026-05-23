@@ -16,6 +16,26 @@ interface MermaidApi {
 
 let mermaidInitialized = false
 
+const DANGEROUS_SVG_ELEMENTS = 'script,foreignObject,iframe,object,embed'
+const DANGEROUS_ATTR_PATTERN = /^on|^xlink:href$|^href$/i
+
+function sanitizeSvg(svgString: string): string {
+  const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml')
+  for (const el of doc.querySelectorAll(DANGEROUS_SVG_ELEMENTS)) {
+    el.remove()
+  }
+  for (const el of doc.querySelectorAll('*')) {
+    for (const attr of [...el.attributes]) {
+      if (DANGEROUS_ATTR_PATTERN.test(attr.name)) {
+        if (attr.name.startsWith('on') || /^\s*javascript:/i.test(attr.value)) {
+          el.removeAttribute(attr.name)
+        }
+      }
+    }
+  }
+  return doc.documentElement.outerHTML
+}
+
 export function getShikiHighlighter(): Promise<ShikiHighlighter> | null {
   const ready = (window as unknown as Record<string, unknown>).__shikiReady
   return ready as Promise<ShikiHighlighter> | null
@@ -45,7 +65,7 @@ async function renderMermaid(source: string, container: HTMLElement): Promise<vo
 
     const id = `mermaid-${crypto.randomUUID()}`
     const { svg } = await mermaid.render(id, source)
-    container.innerHTML = svg
+    container.innerHTML = sanitizeSvg(svg)
   } catch (err) {
     container.textContent = `Diagram error: ${err instanceof Error ? err.message : String(err)}`
     container.classList.add('mermaid-error')

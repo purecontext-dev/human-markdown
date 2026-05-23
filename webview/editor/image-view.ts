@@ -8,6 +8,8 @@ export type ImageUriResolver = (src: string) => Promise<string>
 
 const loadedCache = new Map<string, string>()
 
+const ALLOWED_PROTOCOLS = /^(https?:|vscode-webview:|data:image\/)/i
+
 function isLocalPath(src: string): boolean {
   return !/^[a-z][a-z0-9+.-]*:/i.test(src)
 }
@@ -40,8 +42,14 @@ export function createImageView(resolve: ImageUriResolver) {
         }
 
         if (!isLocalPath(src)) {
-          img.src = src
-          img.classList.remove('image-loading', 'image-broken')
+          if (ALLOWED_PROTOCOLS.test(src)) {
+            img.src = src
+            img.classList.remove('image-loading', 'image-broken')
+          } else {
+            img.removeAttribute('src')
+            img.classList.add('image-broken')
+            img.classList.remove('image-loading')
+          }
           return
         }
 
