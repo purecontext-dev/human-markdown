@@ -19,6 +19,7 @@ pnpm-lock.yaml
 CLAUDE.md
 mock.html
 hand-drawn-border*.svg
+dist/**/*.map
 *.vsix
 .DS_Store
 .mcp.json

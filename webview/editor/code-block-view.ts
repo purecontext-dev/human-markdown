@@ -3,6 +3,7 @@ import { $view } from '@milkdown/kit/utils'
 import { codeBlockSchema } from '@milkdown/preset-commonmark'
 import type { Node as ProsemirrorNode } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
+import { sanitizeSvg } from './sanitize-svg'
 import { observeBlock, unobserveBlock } from './viewport-observer'
 
 interface ShikiHighlighter {
@@ -45,7 +46,7 @@ async function renderMermaid(source: string, container: HTMLElement): Promise<vo
 
     const id = `mermaid-${crypto.randomUUID()}`
     const { svg } = await mermaid.render(id, source)
-    container.innerHTML = svg
+    container.innerHTML = sanitizeSvg(svg)
   } catch (err) {
     container.textContent = `Diagram error: ${err instanceof Error ? err.message : String(err)}`
     container.classList.add('mermaid-error')

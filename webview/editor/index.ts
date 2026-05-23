@@ -76,6 +76,8 @@ let suppressCmUpdate = false
 let syncingContent = true
 let currentMode: 'preview' | 'raw' = 'preview'
 let webviewDirty = false
+let initInProgress = false
+let pendingContent: string | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -152,9 +154,7 @@ function setMode(mode: 'preview' | 'raw') {
         // ignore
       }
       suppressMilkdownUpdate = false
-      requestAnimationFrame(() => {
-        syncingContent = false
-      })
+      syncingContent = false
     }
   } else {
     previewContainer.classList.add('hidden')
@@ -227,6 +227,11 @@ async function initMilkdown(content: string) {
   const root = document.getElementById('editor')
   if (!root) return
 
+  if (initInProgress) {
+    pendingContent = content
+    return
+  }
+  initInProgress = true
   currentContent = content
 
   try {
@@ -278,6 +283,13 @@ async function initMilkdown(content: string) {
   requestAnimationFrame(() => {
     syncingContent = false
   })
+
+  initInProgress = false
+  if (pendingContent !== null) {
+    const deferred = pendingContent
+    pendingContent = null
+    updateContent(deferred)
+  }
 }
 
 function updateContent(content: string, opts?: { keepDirty?: boolean }) {
@@ -294,9 +306,7 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
       if (root) renderFallback(root, content, err)
     }
     suppressMilkdownUpdate = false
-    requestAnimationFrame(() => {
-      syncingContent = false
-    })
+    syncingContent = false
   }
 
   if (cmEditor) {

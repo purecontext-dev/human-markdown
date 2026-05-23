@@ -19,7 +19,7 @@ function renderMathToHtml(expression: string, displayMode: boolean): string {
       displayMode,
       throwOnError: false,
       strict: true,
-      output: 'mathml',
+      output: 'mathml' as const,
     })
   } catch {
     return ''
@@ -153,6 +153,9 @@ export const mathInlineView = $view(mathInlineSchema.node, () => {
           span.textContent = `$${newValue}$`
         }
         return true
+      },
+      destroy() {
+        window.removeEventListener('katex-ready', onKatexReady)
       },
     }
   }
