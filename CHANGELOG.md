@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.1 - 2026-05-23
+
+### Security
+- Sanitize Mermaid SVG output before DOM insertion — strips script, foreignObject, iframe, and dangerous href attributes
+- Image protocol allowlist — reject unknown URI schemes instead of passing them through
+
+### Fixed
+- Three-way merge base set to merged result instead of disk content, preventing phantom diffs on subsequent external changes
+- Concurrent async edits no longer trample the sync-suppression flag (ref-counted instead of boolean)
+- Toggle and find commands now target only the active editor, not all open markdown files
+- File watcher no longer races with document change handler on external edits
+- "Keep mine" conflict resolution defers dirty-state clearing until the edit succeeds
+- Save handler captures document text before save I/O, not after — prevents base corruption if the user types during save
+- Concurrent update messages during Milkdown init no longer create duplicate live editors
+- Tab key no longer traps keyboard focus at document boundaries
+- syncingContent flag cleared synchronously after replaceAll (ProseMirror dispatch is synchronous)
+- mathInlineView now removes its katex-ready listener on destroy, matching mathDisplayView
+
+### Changed
+- Removed `passWithNoTests` from vitest config — test discovery failures now surface in CI
+- Excluded sourcemaps from VSIX packaging
+- KaTeX output option typed with `as const` to prevent accidental mode switch
+
 ## 0.4.0 - 2026-05-22
 
 - Copy-to-clipboard button on code blocks with error feedback on failure
