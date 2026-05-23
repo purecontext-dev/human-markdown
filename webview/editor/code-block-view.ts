@@ -3,6 +3,7 @@ import { $view } from '@milkdown/kit/utils'
 import { codeBlockSchema } from '@milkdown/preset-commonmark'
 import type { Node as ProsemirrorNode } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
+import { sanitizeSvg } from './sanitize-svg'
 import { observeBlock, unobserveBlock } from './viewport-observer'
 
 interface ShikiHighlighter {
@@ -15,26 +16,6 @@ interface MermaidApi {
 }
 
 let mermaidInitialized = false
-
-const DANGEROUS_SVG_ELEMENTS = 'script,foreignObject,iframe,object,embed'
-const DANGEROUS_ATTR_PATTERN = /^on|^xlink:href$|^href$/i
-
-function sanitizeSvg(svgString: string): string {
-  const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml')
-  for (const el of doc.querySelectorAll(DANGEROUS_SVG_ELEMENTS)) {
-    el.remove()
-  }
-  for (const el of doc.querySelectorAll('*')) {
-    for (const attr of [...el.attributes]) {
-      if (DANGEROUS_ATTR_PATTERN.test(attr.name)) {
-        if (attr.name.startsWith('on') || /^\s*javascript:/i.test(attr.value)) {
-          el.removeAttribute(attr.name)
-        }
-      }
-    }
-  }
-  return doc.documentElement.outerHTML
-}
 
 export function getShikiHighlighter(): Promise<ShikiHighlighter> | null {
   const ready = (window as unknown as Record<string, unknown>).__shikiReady
