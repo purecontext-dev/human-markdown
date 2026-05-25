@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 - 2026-05-25
+
+### Fixed
+- Task list checkboxes now toggle reliably at all VS Code zoom levels
+- Mermaid diagram node labels are now visible (were stripped by SVG sanitizer)
+
 ## 0.4.2 - 2026-05-24
 
 ### Fixed
