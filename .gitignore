@@ -3,3 +3,7 @@ dist/
 *.vsix
 .forge/dev-state.json
 .mcp.json
+
+# Crucible QA (ephemeral per-operator state)
+.forge/crucible/review-checkpoints/
+.forge/crucible/review-state/
