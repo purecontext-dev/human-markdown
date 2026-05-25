@@ -14,11 +14,17 @@ export const taskListTogglePlugin = $prose(() => {
 
         const pos = view.posAtDOM(li, 0)
         const resolved = view.state.doc.resolve(pos)
-        const node = resolved.parent
 
-        if (node.type.name !== 'list_item' || node.attrs.checked == null) return false
+        let depth = resolved.depth
+        while (depth > 0 && resolved.node(depth).type.name !== 'list_item') {
+          depth--
+        }
+        if (depth === 0) return false
 
-        const nodePos = resolved.before(resolved.depth)
+        const node = resolved.node(depth)
+        if (node.attrs.checked == null) return false
+
+        const nodePos = resolved.before(depth)
         view.dispatch(
           view.state.tr.setNodeMarkup(nodePos, undefined, {
             ...node.attrs,
