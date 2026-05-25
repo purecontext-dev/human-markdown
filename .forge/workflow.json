@@ -1,0 +1,75 @@
+{
+  "name": "build-lifecycle",
+  "description": "State machine for the development lifecycle in Forge-exported projects. Manages task pickup, implementation, shipping, QA review, and iteration.",
+  "initial_state": "idle",
+  "states": {
+    "idle": {
+      "description": "No active task. Ready to pick up work.",
+      "transitions": [{ "event": "task-picked", "target": "implementing", "action": "/forge:next" }]
+    },
+    "implementing": {
+      "description": "Actively writing code for a task. Quality gates apply.",
+      "transitions": [
+        { "event": "implementation-complete", "target": "ready-to-ship", "action": null },
+        { "event": "task-abandoned", "target": "idle", "action": null }
+      ]
+    },
+    "ready-to-ship": {
+      "description": "Implementation done, task closed locally. Ready for shipping pipeline.",
+      "transitions": [{ "event": "ship-started", "target": "shipping", "action": "/forge:ship" }]
+    },
+    "shipping": {
+      "description": "Ship pipeline in progress — pre-checks, audit, commit, push, PR.",
+      "transitions": [
+        { "event": "pr-created", "target": "in-review", "action": null },
+        { "event": "checks-failed", "target": "implementing", "action": null }
+      ]
+    },
+    "in-review": {
+      "description": "PR created, crucible QA review in progress.",
+      "triggers": [
+        {
+          "condition": "session_counters.review_rounds >= thresholds.max_review_rounds",
+          "target": "escalated",
+          "action": null
+        }
+      ],
+      "transitions": [
+        { "event": "review-approved", "target": "approved", "action": null },
+        { "event": "changes-requested", "target": "iterating", "action": "/forge:iterate" }
+      ]
+    },
+    "iterating": {
+      "description": "Addressing QA feedback. Reading PR comments, fixing, pushing.",
+      "transitions": [
+        { "event": "fixes-pushed", "target": "in-review", "action": null },
+        { "event": "iteration-abandoned", "target": "approved", "action": null }
+      ]
+    },
+    "approved": {
+      "description": "QA approved (or skipped). PR ready for merge.",
+      "transitions": [{ "event": "merged", "target": "idle", "action": "/forge:merged" }]
+    },
+    "escalated": {
+      "description": "QA loop exceeded max rounds. User intervention required.",
+      "transitions": [
+        { "event": "user-resolved", "target": "approved", "action": null },
+        { "event": "back-to-iterating", "target": "iterating", "action": "/forge:iterate" }
+      ]
+    }
+  },
+  "thresholds": {
+    "max_review_rounds": 3
+  },
+  "global_actions": ["/forge:session-audit", "/forge:gates"],
+  "resumption_targets": {
+    "idle": "idle",
+    "implementing": "implementing",
+    "ready-to-ship": "ready-to-ship",
+    "shipping": "ready-to-ship",
+    "in-review": "in-review",
+    "iterating": "iterating",
+    "approved": "approved",
+    "escalated": "escalated"
+  }
+}
