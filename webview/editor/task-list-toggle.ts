@@ -1,39 +1,59 @@
 import { $prose } from '@milkdown/kit/utils'
-import { Plugin } from '@milkdown/prose/state'
+import { Plugin, type PluginView } from '@milkdown/prose/state'
+import type { EditorView } from '@milkdown/prose/view'
 
-export const taskListTogglePlugin = $prose(() => {
-  return new Plugin({
-    props: {
-      handleClick(view, _pos, event) {
-        const target = event.target as HTMLElement
-        const li = target.closest('li[data-item-type="task"]')
-        if (!li) return false
+class TaskListToggleView implements PluginView {
+  private handler: (event: MouseEvent) => void
 
-        const rect = li.getBoundingClientRect()
-        if (event.clientX > rect.left + 24) return false
+  constructor(private view: EditorView) {
+    this.handler = this.handleClick.bind(this)
+    this.view.dom.addEventListener('mousedown', this.handler, true)
+  }
 
-        const pos = view.posAtDOM(li, 0)
-        const resolved = view.state.doc.resolve(pos)
+  private handleClick(event: MouseEvent) {
+    const target = event.target as HTMLElement
+    const li = target.closest('li[data-item-type="task"]')
+    if (!li) return
 
-        let depth = resolved.depth
-        while (depth > 0 && resolved.node(depth).type.name !== 'list_item') {
-          depth--
-        }
-        if (depth === 0) return false
+    const firstChild = li.firstElementChild
+    if (!firstChild) return
+    const liRect = li.getBoundingClientRect()
+    const textLeft = firstChild.getBoundingClientRect().left
+    const checkboxZone = textLeft - liRect.left
+    if (event.clientX > liRect.left + checkboxZone * 1.5) return
 
-        const node = resolved.node(depth)
-        if (node.attrs.checked == null) return false
+    event.preventDefault()
+    event.stopPropagation()
 
-        const nodePos = resolved.before(depth)
-        view.dispatch(
-          view.state.tr.setNodeMarkup(nodePos, undefined, {
+    const pos = this.view.posAtDOM(li, 0)
+    const resolved = this.view.state.doc.resolve(pos)
+
+    for (let d = resolved.depth; d > 0; d--) {
+      const node = resolved.node(d)
+      if (node.type.name === 'list_item' && node.attrs.checked != null) {
+        const nodePos = resolved.before(d)
+        this.view.dispatch(
+          this.view.state.tr.setNodeMarkup(nodePos, undefined, {
             ...node.attrs,
             checked: !node.attrs.checked,
           }),
         )
+        return
+      }
+    }
+  }
 
-        return true
-      },
+  update() {}
+
+  destroy() {
+    this.view.dom.removeEventListener('mousedown', this.handler, true)
+  }
+}
+
+export const taskListTogglePlugin = $prose(() => {
+  return new Plugin({
+    view(editorView) {
+      return new TaskListToggleView(editorView)
     },
   })
 })

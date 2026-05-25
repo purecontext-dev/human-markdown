@@ -10,11 +10,28 @@ describe('sanitizeSvg', () => {
     expect(result).toContain('<rect')
   })
 
-  it('strips foreignObject elements', () => {
+  it('preserves foreignObject with allowed HTML tags', () => {
     const input =
-      '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><p>xss</p></body></foreignObject></svg>'
+      '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><div><span>label</span></div></body></foreignObject></svg>'
     const result = sanitizeSvg(input)
-    expect(result).not.toContain('foreignObject')
+    expect(result).toContain('foreignObject')
+    expect(result).toContain('label')
+  })
+
+  it('strips dangerous elements inside foreignObject', () => {
+    const input =
+      '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><script>alert(1)</script><p>safe</p></body></foreignObject></svg>'
+    const result = sanitizeSvg(input)
+    expect(result).not.toContain('script')
+    expect(result).toContain('safe')
+  })
+
+  it('strips disallowed HTML tags inside foreignObject', () => {
+    const input =
+      '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><img src="x" onerror="alert(1)"/><p>text</p></body></foreignObject></svg>'
+    const result = sanitizeSvg(input)
+    expect(result).not.toContain('img')
+    expect(result).toContain('text')
   })
 
   it('strips iframe, object, and embed elements', () => {
