@@ -1,0 +1,13 @@
+{
+  "$schema": "/Users/jeffreese/Code/crucible/plugins/crucible/schemas/pr-review.schema.json",
+  "gh_repo": "purecontext-dev/human-markdown",
+  "target_repo_path": "/Users/jeffreese/Code/human-markdown",
+  "test_command": "pnpm test",
+  "smoke_testing": {
+    "enabled": false,
+    "dev_server_url": null,
+    "dev_command": null
+  },
+  "bug_tracker": "98f27715-649c-48e8-a70c-10de216d21fc",
+  "domain_concerns": []
+}
