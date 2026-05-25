@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 - 2026-05-24
+
+### Fixed
+- Task list checkboxes now toggle correctly when clicked in WYSIWYG mode
+
 ## 0.4.1 - 2026-05-23
 
 ### Security
