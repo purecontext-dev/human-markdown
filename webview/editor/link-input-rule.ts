@@ -21,14 +21,18 @@ import { TextSelection } from '@milkdown/prose/state'
  * use `\s` (which also matches `\n`): a newline trigger makes the rule fire on
  * Enter and swallow the line break instead of splitting the block.
  *
- * Unlike the stock `markRule`, this handler does NOT consume the trailing space.
- * `markRule` would replace the whole match (URL + space) with just the linked
- * URL, leaving no space and the cursor stuck inside the link mark — which forced
- * a second space press, and on macOS the double-space triggers the system
- * "period substitution", corrupting the href. Instead we: mark only the URL,
- * normalize the trailing space to a regular U+0020 *outside* the link, clear the
- * stored link mark, and place the cursor after the space. One space both links
- * the URL and leaves a normal space to keep typing in.
+ * Unlike the stock `markRule`, this handler does NOT leave the cursor inside the
+ * link. `markRule` replaces the match with just the linked URL, leaving no space
+ * and the cursor stuck inside the link mark — which forces a second space press,
+ * and on macOS the double-space triggers the system "period substitution",
+ * corrupting the href. Instead we: mark only the URL, clear the stored link mark,
+ * insert a normal U+0020 space *after* the URL (outside the link), and place the
+ * cursor after that space. One space both links the URL and leaves the cursor in
+ * normal text, ready to keep typing.
+ *
+ * Position contract (see the handler): the rule fires from `handleTextInput`
+ * before the typed space lands in the document, so `start..end` is the URL alone
+ * and the space must be inserted, not replaced.
  */
 // Built from a STRING with an explicit \u00A0 escape (not a literal regex):
 // a literal non-breaking space in a regex is invisible in source and was
@@ -41,17 +45,25 @@ export const linkInputRule = $inputRule((ctx) => {
   const linkType = linkSchema.type(ctx)
   return new InputRule(URL_INPUT_RULE_REGEX, (state, match, start, end) => {
     const url = match[1]
-    const urlEnd = start + url.length
+    // prosemirror-inputrules fires this from `handleTextInput` *before* the typed
+    // space is committed to the document: the space exists only as the matched
+    // string, not as a node. So `start..end` spans the URL alone (`end` is the
+    // cursor, sitting at the end of the URL), and the trailing space is NOT in the
+    // doc. We therefore INSERT a space rather than replace one. (The unit test
+    // must build the same pre-space state, or it tests a fiction jsdom allows.)
     const tr = state.tr
     // Link only the URL.
-    tr.addMark(start, urlEnd, linkType.create({ href: url }))
-    // Replace the matched trailing char (space or nbsp) with a regular space
-    // that is NOT inside the link. Both are one character, so `end` is stable.
-    tr.replaceWith(urlEnd, end, state.schema.text(' '))
-    // Don't carry the link mark into subsequent typing, and put the cursor after
-    // the space (in `tr.doc`, the post-edit document).
+    tr.addMark(start, end, linkType.create({ href: url }))
+    // Clear the stored link mark first so the inserted space — and everything the
+    // user types next — is plain text, not a continuation of the link.
     tr.removeStoredMark(linkType)
-    tr.setSelection(TextSelection.create(tr.doc, end))
+    // Insert a real space just after the URL, outside the link mark.
+    tr.insert(end, state.schema.text(' '))
+    // Place the cursor AFTER the inserted space (end + 1), so the link is closed
+    // and the user keeps typing in normal text. Setting it to `end` would leave
+    // the cursor at the link boundary (resolved as inside the mark) — the reported
+    // "space didn't move the cursor out of the link" bug.
+    tr.setSelection(TextSelection.create(tr.doc, end + 1))
     return tr
   })
 })

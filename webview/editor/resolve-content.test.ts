@@ -8,9 +8,11 @@ import {
   remarkCtx,
   remarkStringifyOptionsCtx,
   rootCtx,
+  schemaCtx,
+  serializerCtx,
 } from '@milkdown/core'
 import { replaceAll } from '@milkdown/kit/utils'
-import { commonmark } from '@milkdown/preset-commonmark'
+import { commonmark, linkSchema } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { afterEach, describe, expect, it } from 'vitest'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
@@ -20,7 +22,11 @@ import {
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
-import { resolveWysiwygContent, serializeWysiwygDoc } from './resolve-content'
+import {
+  normalizeSerializedMarkdown,
+  resolveWysiwygContent,
+  serializeWysiwygDoc,
+} from './resolve-content'
 
 const fixturesDir = join(__dirname, '__fixtures__')
 
@@ -203,5 +209,62 @@ describe('resolveWysiwygContent', () => {
     // makes the same call drift — exactly the bug the raw->preview re-anchor fixes.
     const staleBaseline = 'placeholder\n'
     expect(resolveWysiwygContent(editor, rawText, staleBaseline)).toBe(driftedBaseline)
+  })
+})
+
+describe('normalizeSerializedMarkdown', () => {
+  it('strips a trailing `&#x20;` entity at end of line', () => {
+    expect(normalizeSerializedMarkdown('<http://test.com>&#x20;\n')).toBe('<http://test.com>\n')
+  })
+
+  it('strips literal trailing spaces and tabs', () => {
+    expect(normalizeSerializedMarkdown('some text   \n')).toBe('some text\n')
+    expect(normalizeSerializedMarkdown('tabbed\t\n')).toBe('tabbed\n')
+  })
+
+  it('trims every line, not just the last', () => {
+    expect(normalizeSerializedMarkdown('a&#x20;\nb   \nc\n')).toBe('a\nb\nc\n')
+  })
+
+  it('leaves a space that is followed by content untouched', () => {
+    expect(normalizeSerializedMarkdown('<http://test.com> for details\n')).toBe(
+      '<http://test.com> for details\n',
+    )
+  })
+
+  // Regression: a hard break in this pipeline serializes as a trailing backslash
+  // (`line\`), NOT two trailing spaces, so trimming trailing whitespace must not
+  // touch it. If the serializer ever emitted space-style hard breaks this would
+  // catch the regression.
+  it('does not corrupt a backslash hard break', () => {
+    expect(normalizeSerializedMarkdown('line one\\\nline two\n')).toBe('line one\\\nline two\n')
+  })
+})
+
+describe('serializeWysiwygDoc: &#x20; corruption (the reported bug)', () => {
+  // A URL typed in rich text is auto-linked with a real trailing space for
+  // natural cursor flow (link-input-rule.ts). When the URL is alone on a line,
+  // that space lands at block-end and the serializer escapes it to `&#x20;`.
+  // serializeWysiwygDoc must return clean markdown via normalizeSerializedMarkdown.
+  it('a link followed by a block-end space does not serialize to &#x20;', async () => {
+    const editor = await makeEditor('')
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const schema = ctx.get(schemaCtx)
+      const linkType = linkSchema.type(ctx)
+      const url = 'http://test.com'
+      const linked = schema.text(url, [linkType.create({ href: url })])
+      const space = schema.text(' ')
+      const para = schema.node('paragraph', null, [linked, space])
+      const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, para)
+      view.dispatch(tr)
+    })
+
+    // Proof the raw serializer produces the corruption this guard removes.
+    const raw = editor.action((ctx) => ctx.get(serializerCtx)(ctx.get(editorViewCtx).state.doc))
+    expect(raw).toContain('&#x20;')
+
+    // serializeWysiwygDoc must hand back clean bytes.
+    expect(serializeWysiwygDoc(editor)).toBe('<http://test.com>\n')
   })
 })

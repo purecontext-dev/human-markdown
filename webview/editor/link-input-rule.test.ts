@@ -14,6 +14,7 @@ import { EditorState, TextSelection } from '@milkdown/prose/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { bareUrlParsePlugin, bareUrlStringifyPlugin } from './bare-url-plugin'
 import { URL_INPUT_RULE_REGEX, linkInputRule } from './link-input-rule'
+import { nonInclusiveLinkSchema } from './non-inclusive-link'
 
 const NBSP = String.fromCharCode(0xa0)
 
@@ -36,6 +37,7 @@ async function makeEditor(markdown: string): Promise<Editor> {
     })
     .use(commonmark)
     .use(gfm)
+    .use(nonInclusiveLinkSchema)
     .use(bareUrlParsePlugin)
     .use(bareUrlStringifyPlugin)
     .use(linkInputRule)
@@ -90,8 +92,19 @@ describe('linkInputRule (the real installed rule)', () => {
     text: string
     href: string | null
     cursorInLink: boolean
+    /** Resolved cursor position in the post-edit doc. */
+    cursorPos: number
+    /** Character immediately before the cursor (what the user just "passed"). */
+    charBeforeCursor: string
   }
 
+  // Faithfully reproduce the prosemirror-inputrules `handleTextInput` contract:
+  // the rule fires BEFORE the typed terminator (space/nbsp) is committed, so the
+  // document contains ONLY the URL, and the handler is called with
+  // `start` = URL start, `end` = cursor at the END of the URL (no space in doc).
+  // An earlier version of this test put the space in the doc and pointed `end`
+  // past it — a fiction jsdom tolerated but the real editor never produces, which
+  // is why the cursor/space behavior passed here yet failed live.
   function runRule(editor: Editor, urlPlusTerminator: string): RuleResult {
     return editor.action((ctx) => {
       const schema = ctx.get(schemaCtx)
@@ -102,14 +115,16 @@ describe('linkInputRule (the real installed rule)', () => {
       )
       if (!rule) throw new Error('URL input rule not registered')
 
-      const doc = schema.node('doc', null, [
-        schema.node('paragraph', null, [schema.text(urlPlusTerminator)]),
-      ])
-      let state = EditorState.create({ doc })
-      const end = 1 + urlPlusTerminator.length
-      state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, end)))
       const match = urlPlusTerminator.match(URL_INPUT_RULE_REGEX)
       if (!match) throw new Error('terminator did not match the rule regex')
+      const url = match[1]
+
+      // Doc holds the URL only — the terminator is the not-yet-committed char.
+      const doc = schema.node('doc', null, [schema.node('paragraph', null, [schema.text(url)])])
+      let state = EditorState.create({ doc })
+      const start = 1
+      const end = start + url.length // cursor at end of URL
+      state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, end)))
 
       const handler = (
         rule as unknown as {
@@ -121,7 +136,7 @@ describe('linkInputRule (the real installed rule)', () => {
           ) => typeof state.tr | null
         }
       ).handler
-      const tr = handler(state, match, 1, end)
+      const tr = handler(state, match, start, end)
       if (!tr) throw new Error('rule handler returned null')
       const next = state.apply(tr)
 
@@ -131,11 +146,15 @@ describe('linkInputRule (the real installed rule)', () => {
         if (lm) href = lm.attrs.href as string
         return true
       })
+      const cursorPos = next.selection.from
       const cursorInLink = next.doc
-        .resolve(next.selection.from)
+        .resolve(cursorPos)
         .marks()
         .some((m) => m.type === linkType)
-      return { text: next.doc.textContent, href, cursorInLink }
+      // The character directly before the cursor (textContent is 0-indexed;
+      // doc positions are 1-indexed at the paragraph start, so pos-2 maps to it).
+      const charBeforeCursor = next.doc.textContent.charAt(cursorPos - 2)
+      return { text: next.doc.textContent, href, cursorInLink, cursorPos, charBeforeCursor }
     })
   }
 
@@ -151,14 +170,19 @@ describe('linkInputRule (the real installed rule)', () => {
     expect(r.href).toBe('https://github.com/jeffreese')
   })
 
-  it('preserves a regular space after the link and leaves the cursor OUTSIDE the link', async () => {
+  it('inserts a regular space after the link and moves the cursor PAST it', async () => {
     const editor = await makeEditor('')
     const r = runRule(editor, `http://test.com${NBSP}`)
-    // The trailing nbsp is normalized to a regular space and kept (not consumed).
+    // A real U+0020 space is inserted after the URL (the live editor's nbsp is
+    // not carried into the doc; the rule adds a normal space).
     expect(r.text).toBe('http://test.com ')
     expect(r.text.charCodeAt(r.text.length - 1)).toBe(0x20)
-    // Cursor must not be inside the link mark, so further typing isn't linked.
+    // The reported bug: the cursor stayed in the link and no space appeared.
+    // Cursor must be OUTSIDE the link and positioned AFTER the inserted space,
+    // so the next keystroke is plain text following a real space.
     expect(r.cursorInLink).toBe(false)
+    expect(r.charBeforeCursor).toBe(' ')
+    expect(r.cursorPos).toBe(r.text.length + 1) // 1-indexed end of paragraph
   })
 
   it('a typed-URL link round-trips back as a link (not de-linked)', async () => {
@@ -221,5 +245,58 @@ describe('Enter at the end of a URL splits the line', () => {
     expect(paragraphCount(editor)).toBe(1)
     pressEnter(editor)
     expect(paragraphCount(editor)).toBe(2)
+  })
+})
+
+// The reported regression that the input rule could NOT fix: clicking back to
+// the end of an EXISTING link and pressing space. No input rule fires here — it
+// is a plain space keystroke at the link's right boundary. With an inclusive
+// link mark (ProseMirror's default) the space is absorbed into the link and the
+// contenteditable swallows it; the non-inclusive override (non-inclusive-link.ts)
+// puts the boundary outside the mark so the space is plain text and appears.
+describe('typing a space at the end of an existing link (non-inclusive mark)', () => {
+  function placeCursorAtEndOfLink(editor: Editor): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let linkEnd = -1
+      view.state.doc.descendants((node, pos) => {
+        if (node.isText && node.marks.some((m) => m.type.name === 'link')) {
+          linkEnd = pos + node.nodeSize
+        }
+        return true
+      })
+      if (linkEnd < 0) throw new Error('no link node found')
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, linkEnd)))
+    })
+  }
+
+  function typeSpace(editor: Editor): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const { from, to } = view.state.selection
+      // biome-ignore lint/suspicious/noExplicitAny: someProp handler signature
+      const handled = view.someProp('handleTextInput', (f: any) => f(view, from, to, ' '))
+      if (!handled) view.dispatch(view.state.tr.insertText(' ', from, to))
+    })
+  }
+
+  function charAtCursorIsLinked(editor: Editor): { linked: boolean; text: string } {
+    return editor.action((ctx) => {
+      const { state } = ctx.get(editorViewCtx)
+      const pos = state.selection.from
+      const before = state.doc.resolve(pos)
+      const linked = before.marks().some((m) => m.type.name === 'link')
+      return { linked, text: state.doc.textContent }
+    })
+  }
+
+  it('the typed space is inserted and is NOT part of the link', async () => {
+    // Explicit `<...>` autolink stays a link on load (bare-url revert leaves it).
+    const editor = await makeEditor('<http://test.com>\n')
+    placeCursorAtEndOfLink(editor)
+    typeSpace(editor)
+    const { linked, text } = charAtCursorIsLinked(editor)
+    expect(text).toBe('http://test.com ') // the space appears
+    expect(linked).toBe(false) // and it is not inside the link
   })
 })

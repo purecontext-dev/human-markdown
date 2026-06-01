@@ -19,6 +19,16 @@ const editorCSS = `
 
   .milkdown .editor {
     outline: none;
+    /*
+     * ProseMirror requires white-space: pre-wrap on the editable surface.
+     * Without it, the contenteditable collapses trailing and consecutive spaces
+     * per default HTML whitespace rules: a space typed at the end of content (or
+     * after a link) is present in the document model but renders with zero width,
+     * so it looks like the space "didn't appear" and the caret looks stuck.
+     * ProseMirror logs a console warning when this is unset. pre-wrap preserves
+     * spaces and newlines while still wrapping long lines.
+     */
+    white-space: pre-wrap;
   }
 
   .milkdown h1, .milkdown h2 {
