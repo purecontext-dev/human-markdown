@@ -160,6 +160,12 @@ function setMode(mode: 'preview' | 'raw') {
       }
       suppressMilkdownUpdate = false
       syncingContent = false
+      // Re-anchor the drift baseline to the content just loaded from raw. Without
+      // this, raw text that the serializer would normalize (e.g. `http://` ->
+      // `http\://`) is seen as an edit on the next toggle and drifts, even though
+      // the user never edited in rich text. With it, an untouched round-trip
+      // (raw -> rich text -> raw) returns the faithful raw `currentContent`.
+      baselineSerialized = serializeWysiwygDoc(milkdownEditor)
     }
   } else {
     previewContainer.classList.add('hidden')

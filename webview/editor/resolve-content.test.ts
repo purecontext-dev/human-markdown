@@ -181,4 +181,27 @@ describe('resolveWysiwygContent', () => {
     const resolved = resolveWysiwygContent(editor, updated, newBaseline)
     expect(resolved).toBe(updated)
   })
+
+  // raw -> rich text -> raw must not normalize content the serializer would
+  // escape (e.g. `http://` -> `http\://`) when the user never edited in rich
+  // text. The fix re-anchors the baseline when content loads from raw, so an
+  // untouched round-trip returns the faithful raw `currentContent`.
+  it('preserves serializer-normalizable raw text across an untouched round-trip', async () => {
+    const rawText = 'Visit http://example.com now\n'
+    // Confirm the serializer would otherwise drift this (guards the test's premise).
+    const editor = await makeEditor('placeholder\n')
+    editor.action(replaceAll(rawText, true))
+    const driftedBaseline = serializeWysiwygDoc(editor)
+    expect(driftedBaseline).not.toBe(rawText)
+
+    // Baseline re-anchored to the just-loaded raw content (as setMode now does).
+    // currentContent holds the faithful raw text from CodeMirror.
+    const resolved = resolveWysiwygContent(editor, rawText, driftedBaseline)
+    expect(resolved).toBe(rawText)
+
+    // Teeth: a STALE baseline (anything that differs from the live serialization)
+    // makes the same call drift — exactly the bug the raw->preview re-anchor fixes.
+    const staleBaseline = 'placeholder\n'
+    expect(resolveWysiwygContent(editor, rawText, staleBaseline)).toBe(driftedBaseline)
+  })
 })
