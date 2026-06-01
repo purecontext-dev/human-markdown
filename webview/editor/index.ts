@@ -14,6 +14,7 @@ import { gfm } from '@milkdown/preset-gfm'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
+import { bareUrlParsePlugin, bareUrlStringifyPlugin } from './bare-url-plugin'
 import { codeBlockView } from './code-block-view'
 import { CmSearchBackend, createCodeMirrorEditor } from './codemirror-editor'
 import { ConflictBar } from './conflict-bar'
@@ -32,10 +33,16 @@ import {
 } from './github-alert-plugin'
 import { createImageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
+import { linkInputRule } from './link-input-rule'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
 import { minimalChange } from './minimal-change'
-import { resolveWysiwygContent, serializeWysiwygDoc } from './resolve-content'
+import { nonInclusiveLinkSchema } from './non-inclusive-link'
+import {
+  normalizeSerializedMarkdown,
+  resolveWysiwygContent,
+  serializeWysiwygDoc,
+} from './resolve-content'
 import { SaveController } from './save-controller'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
@@ -259,8 +266,11 @@ async function initMilkdown(content: string) {
           bullet: '-',
           rule: '-',
         })
-        ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
+        ctx.get(listenerCtx).markdownUpdated((_ctx, rawMarkdown, _prev) => {
           if (suppressMilkdownUpdate || syncingContent) return
+          // Normalize so the saved bytes match the toggle/save serialization and
+          // the dirty-detection baseline (all go through normalizeSerializedMarkdown).
+          const markdown = normalizeSerializedMarkdown(rawMarkdown)
           // The markdownUpdated listener is debounced (200ms in plugin-listener),
           // so it outlives the synchronous suppress flags and fires for the echo
           // of a programmatic load (replaceAll at raw->preview or external update).
@@ -276,6 +286,9 @@ async function initMilkdown(content: string) {
       })
       .use(commonmark)
       .use(gfm)
+      // Override the link mark to be non-inclusive (after commonmark registers it)
+      // so the cursor at a link's end is outside it and a typed space is plain text.
+      .use(nonInclusiveLinkSchema)
       .use(remarkFrontmatterPlugin)
       .use(frontmatterNodeSchema)
       .use(frontmatterView)
@@ -292,6 +305,9 @@ async function initMilkdown(content: string) {
       .use(createImageView(resolveImageUri))
       .use(keyboardNavPlugin)
       .use(taskListTogglePlugin)
+      .use(bareUrlParsePlugin)
+      .use(bareUrlStringifyPlugin)
+      .use(linkInputRule)
       .create()
 
     milkdownEditor.action((ctx) => {
