@@ -160,7 +160,10 @@
     "shiki": "^4.1.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"],
+    "overrides": {
+      "tmp@<0.2.6": ">=0.2.6"
+    }
   },
   "lint-staged": {
     "*.{ts,tsx,js,json}": ["biome check --write"]

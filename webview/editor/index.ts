@@ -35,6 +35,7 @@ import { keyboardNavPlugin } from './keyboard-nav'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
 import { minimalChange } from './minimal-change'
+import { resolveWysiwygContent, serializeWysiwygDoc } from './resolve-content'
 import { SaveController } from './save-controller'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
@@ -78,6 +79,10 @@ let currentMode: 'preview' | 'raw' = 'preview'
 let webviewDirty = false
 let initInProgress = false
 let pendingContent: string | null = null
+// Serialization of the doc as last loaded from disk. Lets the content resolver
+// distinguish a genuine WYSIWYG edit (serialize live) from an unedited doc
+// (return faithful disk bytes), avoiding round-trip drift. See resolve-content.ts.
+let baselineSerialized: string | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -155,12 +160,23 @@ function setMode(mode: 'preview' | 'raw') {
       }
       suppressMilkdownUpdate = false
       syncingContent = false
+      // Re-anchor the drift baseline to the content just loaded from raw. Without
+      // this, raw text that the serializer would normalize (e.g. `http://` ->
+      // `http\://`) is seen as an edit on the next toggle and drifts, even though
+      // the user never edited in rich text. With it, an untouched round-trip
+      // (raw -> rich text -> raw) returns the faithful raw `currentContent`.
+      baselineSerialized = serializeWysiwygDoc(milkdownEditor)
     }
   } else {
     previewContainer.classList.add('hidden')
     cmContainer.classList.add('active')
     previewBtn.classList.remove('active')
     rawBtn.classList.add('active')
+
+    // Leaving WYSIWYG: the live Milkdown doc is authoritative. Read it directly
+    // rather than trusting the debounced `currentContent` cache, which lags after
+    // a recent edit and would otherwise show stale source in raw mode.
+    currentContent = resolveWysiwygContent(milkdownEditor, currentContent, baselineSerialized)
 
     if (!cmEditor) {
       cmEditor = createCodeMirrorEditor(cmContainer, currentContent, (content) => {
@@ -245,6 +261,14 @@ async function initMilkdown(content: string) {
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
           if (suppressMilkdownUpdate || syncingContent) return
+          // The markdownUpdated listener is debounced (200ms in plugin-listener),
+          // so it outlives the synchronous suppress flags and fires for the echo
+          // of a programmatic load (replaceAll at raw->preview or external update).
+          // That echo is the *serialized* form, which can differ from the faithful
+          // raw bytes (e.g. `http://` -> `http\://`). If the update equals the load
+          // baseline, it is that echo, not a user edit — ignore it so currentContent
+          // keeps the faithful raw text and the doc is not falsely marked dirty.
+          if (markdown === baselineSerialized) return
           currentContent = markdown
           setDirty(true)
           vscode.postMessage({ type: 'edit', content: markdown })
@@ -275,6 +299,7 @@ async function initMilkdown(content: string) {
       patchRemarkForTightLists(remark)
       patchRemarkForGithubAlerts(remark)
     })
+    baselineSerialized = serializeWysiwygDoc(milkdownEditor)
   } catch (err) {
     milkdownEditor = null
     renderFallback(root, content, err)
@@ -307,6 +332,10 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
     }
     suppressMilkdownUpdate = false
     syncingContent = false
+    // New authoritative load: re-anchor the drift baseline to the freshly
+    // loaded doc so an unedited toggle/save after an external change returns the
+    // new disk bytes verbatim rather than a re-serialized (drifted) version.
+    baselineSerialized = serializeWysiwygDoc(milkdownEditor)
   }
 
   if (cmEditor) {
@@ -358,8 +387,18 @@ function showSaveError() {
   setTimeout(() => el.remove(), 3000)
 }
 
+// In preview mode the live Milkdown doc is authoritative; resolve it directly so
+// a save fired within the listener's debounce window persists the latest edit
+// rather than the stale cache. In raw mode CodeMirror keeps `currentContent` live.
+function getAuthoritativeContent(): string {
+  if (currentMode === 'preview') {
+    currentContent = resolveWysiwygContent(milkdownEditor, currentContent, baselineSerialized)
+  }
+  return currentContent
+}
+
 const saveController = new SaveController({
-  getCurrentContent: () => currentContent,
+  getCurrentContent: getAuthoritativeContent,
   setDirty,
   postMessage: (msg) => vscode.postMessage(msg),
   hideConflict: () => conflictBar.hide(),
