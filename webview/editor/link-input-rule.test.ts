@@ -46,7 +46,7 @@ async function makeEditor(markdown: string): Promise<Editor> {
 }
 
 describe('URL_INPUT_RULE_REGEX', () => {
-  it('matches a protocol URL followed by whitespace', () => {
+  it('matches a protocol URL followed by a space', () => {
     const m = 'https://github.com/jeffreese '.match(URL_INPUT_RULE_REGEX)
     expect(m?.[1]).toBe('https://github.com/jeffreese')
   })
@@ -55,13 +55,18 @@ describe('URL_INPUT_RULE_REGEX', () => {
     expect('https://github.com/jeffreese'.match(URL_INPUT_RULE_REGEX)).toBeNull()
   })
 
-  it('does not match plain text', () => {
-    expect('just some words '.match(URL_INPUT_RULE_REGEX)).toBeNull()
+  // Critical: the trigger is a literal space, NOT \s. A newline trigger would
+  // make the rule fire on Enter and swallow the line break (the reported bug).
+  it('does NOT match a URL followed by a newline (Enter must split the line)', () => {
+    expect('https://github.com/jeffreese\n'.match(URL_INPUT_RULE_REGEX)).toBeNull()
   })
 
-  it('stops the URL at the whitespace boundary', () => {
-    const m = 'see https://x.com here'.match(/(https?:\/\/[^\s<>]+)\s/)
-    expect(m?.[1]).toBe('https://x.com')
+  it('does NOT match a URL followed by a tab', () => {
+    expect('https://github.com/jeffreese\t'.match(URL_INPUT_RULE_REGEX)).toBeNull()
+  })
+
+  it('does not match plain text', () => {
+    expect('just some words '.match(URL_INPUT_RULE_REGEX)).toBeNull()
   })
 })
 
@@ -124,5 +129,52 @@ describe('linkInputRule (real markRule handler)', () => {
       return found
     })
     expect(hasLink).toBe(true)
+  })
+})
+
+// Regression: the rule must not interfere with pressing Enter at the end of a
+// URL. With a `\s` trigger the rule fired on the newline and swallowed the line
+// break; with a space trigger Enter always splits the block.
+describe('Enter at the end of a URL splits the line', () => {
+  function typeViaInputHandler(editor: Editor, text: string): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      for (const ch of text) {
+        const { from, to } = view.state.selection
+        // biome-ignore lint/suspicious/noExplicitAny: someProp handler signature
+        const handled = view.someProp('handleTextInput', (f: any) => f(view, from, to, ch))
+        if (!handled) view.dispatch(view.state.tr.insertText(ch, from, to))
+      }
+    })
+  }
+
+  function pressEnter(editor: Editor): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      // biome-ignore lint/suspicious/noExplicitAny: someProp handler signature
+      view.someProp('handleKeyDown', (f: any) =>
+        f(view, new KeyboardEvent('keydown', { key: 'Enter' })),
+      )
+    })
+  }
+
+  function paragraphCount(editor: Editor): number {
+    return editor.action((ctx) => ctx.get(editorViewCtx).state.doc.childCount)
+  }
+
+  it('Enter directly after a URL (no trailing space) splits into a new paragraph', async () => {
+    const editor = await makeEditor('')
+    typeViaInputHandler(editor, 'https://github.com/jeffreese')
+    expect(paragraphCount(editor)).toBe(1)
+    pressEnter(editor)
+    expect(paragraphCount(editor)).toBe(2)
+  })
+
+  it('Enter after a URL that was auto-linked (URL + space) still splits', async () => {
+    const editor = await makeEditor('')
+    typeViaInputHandler(editor, 'https://github.com/jeffreese ')
+    expect(paragraphCount(editor)).toBe(1)
+    pressEnter(editor)
+    expect(paragraphCount(editor)).toBe(2)
   })
 })
