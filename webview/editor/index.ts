@@ -14,6 +14,7 @@ import { gfm } from '@milkdown/preset-gfm'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 import type { ThemeTokens } from '../shared/theme/tokens'
 import { applyTheme } from '../shared/theme/tokens'
+import { bareUrlParsePlugin, bareUrlStringifyPlugin } from './bare-url-plugin'
 import { codeBlockView } from './code-block-view'
 import { CmSearchBackend, createCodeMirrorEditor } from './codemirror-editor'
 import { ConflictBar } from './conflict-bar'
@@ -32,6 +33,7 @@ import {
 } from './github-alert-plugin'
 import { createImageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
+import { linkInputRule } from './link-input-rule'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { mathDisplayView, mathInlineView } from './math-view'
 import { minimalChange } from './minimal-change'
@@ -292,6 +294,9 @@ async function initMilkdown(content: string) {
       .use(createImageView(resolveImageUri))
       .use(keyboardNavPlugin)
       .use(taskListTogglePlugin)
+      .use(bareUrlParsePlugin)
+      .use(bareUrlStringifyPlugin)
+      .use(linkInputRule)
       .create()
 
     milkdownEditor.action((ctx) => {
