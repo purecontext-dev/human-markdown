@@ -261,6 +261,14 @@ async function initMilkdown(content: string) {
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prev) => {
           if (suppressMilkdownUpdate || syncingContent) return
+          // The markdownUpdated listener is debounced (200ms in plugin-listener),
+          // so it outlives the synchronous suppress flags and fires for the echo
+          // of a programmatic load (replaceAll at raw->preview or external update).
+          // That echo is the *serialized* form, which can differ from the faithful
+          // raw bytes (e.g. `http://` -> `http\://`). If the update equals the load
+          // baseline, it is that echo, not a user edit — ignore it so currentContent
+          // keeps the faithful raw text and the doc is not falsely marked dirty.
+          if (markdown === baselineSerialized) return
           currentContent = markdown
           setDirty(true)
           vscode.postMessage({ type: 'edit', content: markdown })
