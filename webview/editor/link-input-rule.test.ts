@@ -46,8 +46,17 @@ async function makeEditor(markdown: string): Promise<Editor> {
 }
 
 describe('URL_INPUT_RULE_REGEX', () => {
-  it('matches a protocol URL followed by a space', () => {
+  it('matches a protocol URL followed by a regular space (U+0020)', () => {
     const m = 'https://github.com/jeffreese '.match(URL_INPUT_RULE_REGEX)
+    expect(m?.[1]).toBe('https://github.com/jeffreese')
+  })
+
+  // The bug that shipped: a contenteditable inserts a NON-BREAKING space
+  // (U+00A0) when the space bar is pressed at the end of content, so the rule
+  // must match it too. jsdom inserts U+0020, which is why the old ` $` trigger
+  // passed every test yet never fired in the real editor.
+  it('matches a protocol URL followed by a non-breaking space (U+00A0)', () => {
+    const m = 'https://github.com/jeffreese '.match(URL_INPUT_RULE_REGEX)
     expect(m?.[1]).toBe('https://github.com/jeffreese')
   })
 
