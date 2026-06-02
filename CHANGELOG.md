@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.5 - 2026-06-01
+
+### Improved
+- Editing one block in a document no longer reformats the rest of the file. Untouched blocks preserve their original formatting — emphasis style (`_italic_` vs `*italic*`), list markers (`*`/`+` vs `-`), bare URLs, indentation, and blank-line patterns all stay as-written.
+
 ## 0.4.4 - 2026-06-01
 
 ### Added
