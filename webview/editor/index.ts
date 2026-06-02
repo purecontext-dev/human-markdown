@@ -44,6 +44,8 @@ import {
   serializeWysiwygDoc,
 } from './resolve-content'
 import { SaveController } from './save-controller'
+import type { SourceMap } from './source-splice'
+import { buildSourceMap } from './source-splice'
 import { injectEditorStyles } from './styles'
 import { taskListTogglePlugin } from './task-list-toggle'
 
@@ -90,6 +92,7 @@ let pendingContent: string | null = null
 // distinguish a genuine WYSIWYG edit (serialize live) from an unedited doc
 // (return faithful disk bytes), avoiding round-trip drift. See resolve-content.ts.
 let baselineSerialized: string | null = null
+let sourceMap: SourceMap | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -173,6 +176,7 @@ function setMode(mode: 'preview' | 'raw') {
       // the user never edited in rich text. With it, an untouched round-trip
       // (raw -> rich text -> raw) returns the faithful raw `currentContent`.
       baselineSerialized = serializeWysiwygDoc(milkdownEditor)
+      sourceMap = baselineSerialized ? buildSourceMap(cmContent, baselineSerialized) : null
     }
   } else {
     previewContainer.classList.add('hidden')
@@ -183,7 +187,12 @@ function setMode(mode: 'preview' | 'raw') {
     // Leaving WYSIWYG: the live Milkdown doc is authoritative. Read it directly
     // rather than trusting the debounced `currentContent` cache, which lags after
     // a recent edit and would otherwise show stale source in raw mode.
-    currentContent = resolveWysiwygContent(milkdownEditor, currentContent, baselineSerialized)
+    currentContent = resolveWysiwygContent(
+      milkdownEditor,
+      currentContent,
+      baselineSerialized,
+      sourceMap,
+    )
 
     if (!cmEditor) {
       cmEditor = createCodeMirrorEditor(cmContainer, currentContent, (content) => {
@@ -329,6 +338,7 @@ async function initMilkdown(content: string) {
       patchRemarkForGithubAlerts(remark)
     })
     baselineSerialized = serializeWysiwygDoc(milkdownEditor)
+    sourceMap = baselineSerialized ? buildSourceMap(content, baselineSerialized) : null
   } catch (err) {
     milkdownEditor = null
     renderFallback(root, content, err)
@@ -365,6 +375,7 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
     // loaded doc so an unedited toggle/save after an external change returns the
     // new disk bytes verbatim rather than a re-serialized (drifted) version.
     baselineSerialized = serializeWysiwygDoc(milkdownEditor)
+    sourceMap = baselineSerialized ? buildSourceMap(content, baselineSerialized) : null
   }
 
   if (cmEditor) {
@@ -421,7 +432,12 @@ function showSaveError() {
 // rather than the stale cache. In raw mode CodeMirror keeps `currentContent` live.
 function getAuthoritativeContent(): string {
   if (currentMode === 'preview') {
-    currentContent = resolveWysiwygContent(milkdownEditor, currentContent, baselineSerialized)
+    currentContent = resolveWysiwygContent(
+      milkdownEditor,
+      currentContent,
+      baselineSerialized,
+      sourceMap,
+    )
   }
   return currentContent
 }
