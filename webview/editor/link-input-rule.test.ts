@@ -13,6 +13,7 @@ import { gfm } from '@milkdown/preset-gfm'
 import { EditorState, TextSelection } from '@milkdown/prose/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { bareUrlParsePlugin, bareUrlStringifyPlugin } from './bare-url-plugin'
+import { keyboardNavPlugin } from './keyboard-nav'
 import { URL_INPUT_RULE_REGEX, linkInputRule } from './link-input-rule'
 import { nonInclusiveLinkSchema } from './non-inclusive-link'
 
@@ -41,6 +42,7 @@ async function makeEditor(markdown: string): Promise<Editor> {
     .use(bareUrlParsePlugin)
     .use(bareUrlStringifyPlugin)
     .use(linkInputRule)
+    .use(keyboardNavPlugin)
     .create()
   cleanup = async () => {
     await editor.destroy()
@@ -245,6 +247,97 @@ describe('Enter at the end of a URL splits the line', () => {
     expect(paragraphCount(editor)).toBe(1)
     pressEnter(editor)
     expect(paragraphCount(editor)).toBe(2)
+  })
+})
+
+// Enter at the end of a typed URL auto-links it, mirroring the space input rule.
+// The handler lives in keyboard-nav.ts (handleKeyDown) — input rules cannot do
+// this, since a newline trigger there swallows the block split.
+describe('Enter auto-links the URL at the end of the line', () => {
+  function typeViaInputHandler(editor: Editor, text: string): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      for (const ch of text) {
+        const { from, to } = view.state.selection
+        // biome-ignore lint/suspicious/noExplicitAny: someProp handler signature
+        const handled = view.someProp('handleTextInput', (f: any) => f(view, from, to, ch))
+        if (!handled) view.dispatch(view.state.tr.insertText(ch, from, to))
+      }
+    })
+  }
+
+  function pressEnter(editor: Editor): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      // biome-ignore lint/suspicious/noExplicitAny: someProp handler signature
+      view.someProp('handleKeyDown', (f: any) =>
+        f(view, new KeyboardEvent('keydown', { key: 'Enter' })),
+      )
+    })
+  }
+
+  /** All link hrefs present anywhere in the doc, in document order. */
+  function linkHrefs(editor: Editor): string[] {
+    return editor.action((ctx) => {
+      const hrefs: string[] = []
+      ctx.get(editorViewCtx).state.doc.descendants((node) => {
+        const lm = node.marks.find((m) => m.type.name === 'link')
+        if (lm) hrefs.push(lm.attrs.href as string)
+        return true
+      })
+      return hrefs
+    })
+  }
+
+  it('links a URL the cursor sits at the end of when Enter is pressed', async () => {
+    const editor = await makeEditor('')
+    // No trailing space: the input rule did NOT fire, so the URL is plain text.
+    typeViaInputHandler(editor, 'https://github.com/jeffreese')
+    expect(linkHrefs(editor)).toEqual([])
+    pressEnter(editor)
+    expect(linkHrefs(editor)).toEqual(['https://github.com/jeffreese'])
+  })
+
+  it('links only the trailing URL, leaving preceding text alone', async () => {
+    const editor = await makeEditor('')
+    typeViaInputHandler(editor, 'see https://github.com/jeffreese')
+    pressEnter(editor)
+    expect(linkHrefs(editor)).toEqual(['https://github.com/jeffreese'])
+  })
+
+  it('does nothing when the line does not end in a URL', async () => {
+    const editor = await makeEditor('')
+    // Plain text with no URL — nothing for either rule to link.
+    typeViaInputHandler(editor, 'just some words')
+    pressEnter(editor)
+    expect(linkHrefs(editor)).toEqual([])
+  })
+
+  it('does not link a URL when the cursor is not at its end', async () => {
+    const editor = await makeEditor('')
+    // Plain-text URL (no trailing space, so the space rule never fired).
+    typeViaInputHandler(editor, 'https://github.com/jeffreese')
+    expect(linkHrefs(editor)).toEqual([])
+    // Move the cursor to the very start of the line, then press Enter there.
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const start = TextSelection.create(view.state.doc, 1)
+      view.dispatch(view.state.tr.setSelection(start))
+    })
+    pressEnter(editor)
+    // The handler keys off the cursor position, not just the line's contents, so
+    // a URL the cursor is NOT at the end of stays plain text.
+    expect(linkHrefs(editor)).toEqual([])
+  })
+
+  it('does not re-link a URL that is already a link (no duplicate/stale mark)', async () => {
+    const editor = await makeEditor('')
+    // URL + space auto-links via the input rule; cursor lands after the space.
+    typeViaInputHandler(editor, 'https://github.com/jeffreese ')
+    expect(linkHrefs(editor)).toEqual(['https://github.com/jeffreese'])
+    pressEnter(editor)
+    // Still exactly one link, unchanged.
+    expect(linkHrefs(editor)).toEqual(['https://github.com/jeffreese'])
   })
 })
 

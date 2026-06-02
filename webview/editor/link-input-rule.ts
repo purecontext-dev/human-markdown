@@ -34,12 +34,17 @@ import { TextSelection } from '@milkdown/prose/state'
  * before the typed space lands in the document, so `start..end` is the URL alone
  * and the space must be inserted, not replaced.
  */
+// The core URL shape: `http(s)://` followed by any run of non-space, non-angle
+// characters. Shared as a string so both the space-triggered input rule (below)
+// and the Enter handler (keyboard-nav.ts) detect URLs identically \u2014 one source
+// of truth for what counts as a typed URL.
+export const URL_PATTERN = 'https?://[^\\s<>]+'
+
 // Built from a STRING with an explicit \u00A0 escape (not a literal regex):
 // a literal non-breaking space in a regex is invisible in source and was
 // silently lost during a file rewrite in development. The trailing class
 // matches a regular space (U+0020) OR a non-breaking space (U+00A0).
-// biome-ignore lint/complexity/useRegexLiterals: a literal would require an inline non-breaking space, which is invisible in source and gets lost on edits — the   escape must stay a string
-export const URL_INPUT_RULE_REGEX = new RegExp('(https?://[^\\s<>]+)[ \\u00A0]$')
+export const URL_INPUT_RULE_REGEX = new RegExp(`(${URL_PATTERN})[ \\u00A0]$`)
 
 export const linkInputRule = $inputRule((ctx) => {
   const linkType = linkSchema.type(ctx)
