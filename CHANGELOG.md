@@ -7,9 +7,12 @@
 - Pressing Enter at the end of a typed URL now auto-links it too, matching the space behavior.
 
 ### Fixed
+- Edits made in rich text are no longer lost when switching to raw mode or saving — the live editor is now read directly instead of a stale cache. This was most likely to bite when toggling or saving right after typing, but could drop edits on toggle/save in general.
+- `http://`-style URLs and backslash escapes no longer drift (e.g. `http://` → `http\://`) when toggling raw → rich text → raw, even on files you never edited.
 - Empty paragraphs serialize as real blank lines instead of `<br />` — pressing Enter for a blank line no longer writes a hardbreak to disk.
-- Typed spaces now render correctly, including the space immediately after an auto-linked URL.
-- Toggling between rich text and raw, or receiving external edits, no longer introduces formatting drift on lines you didn't touch.
+- Typed spaces now render correctly, including the space immediately after an auto-linked URL (previously the space could vanish and the cursor stayed stuck inside the link).
+- On macOS, finishing a URL no longer required a double space (which triggered system period-substitution and corrupted the link's address).
+- Pressing Enter at the end of a URL now splits the line as expected, instead of the keystroke being swallowed.
 
 ## 0.4.3 - 2026-05-25
 
