@@ -9,7 +9,7 @@ import {
 } from '@milkdown/core'
 import { replaceAll } from '@milkdown/kit/utils'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
-import { commonmark } from '@milkdown/preset-commonmark'
+import { commonmark, remarkPreserveEmptyLinePlugin } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
 import type { ThemeTokens } from '../shared/theme/tokens'
@@ -309,6 +309,19 @@ async function initMilkdown(content: string) {
       .use(bareUrlStringifyPlugin)
       .use(linkInputRule)
       .create()
+
+    // Remove Milkdown's "preserve empty line" plugin (bundled in `commonmark`).
+    // Its paragraph serializer encodes every empty paragraph as a literal
+    // `<br />` so deliberate blank lines survive markdown's blank-line collapsing.
+    // In this markdown-first editor that is wrong: pressing Enter to make a blank
+    // line creates a clean empty paragraph (verified in the live doc) which then
+    // serialized to `<br />` on disk — the reported "Enter inserts a hardbreak"
+    // bug. With the plugin gone, an empty paragraph serializes as a real blank
+    // line (standard markdown: a run of consecutive blanks collapses to one on
+    // round-trip). Removed after create (status is Created, so no "removing
+    // during creation" warning); this tears down the plugin's ctx slice, which
+    // is exactly what the paragraph serializer checks before emitting `<br />`.
+    await milkdownEditor.remove(remarkPreserveEmptyLinePlugin)
 
     milkdownEditor.action((ctx) => {
       const remark = ctx.get(remarkCtx)

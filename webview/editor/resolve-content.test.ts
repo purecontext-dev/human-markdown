@@ -12,7 +12,7 @@ import {
   serializerCtx,
 } from '@milkdown/core'
 import { replaceAll } from '@milkdown/kit/utils'
-import { commonmark, linkSchema } from '@milkdown/preset-commonmark'
+import { commonmark, linkSchema, remarkPreserveEmptyLinePlugin } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { afterEach, describe, expect, it } from 'vitest'
 import { patchRemarkForTightLists } from '../shared/remark-tight-lists'
@@ -61,6 +61,10 @@ async function makeEditor(markdown: string): Promise<Editor> {
     .use(remarkGithubAlertsPlugin)
     .use(githubAlertSchema)
     .create()
+
+  // Match production (index.ts): drop the preserve-empty-line plugin so empty
+  // paragraphs serialize as blank lines instead of `<br />`.
+  await editor.remove(remarkPreserveEmptyLinePlugin)
 
   editor.action((ctx) => {
     const remark = ctx.get(remarkCtx)
@@ -238,6 +242,42 @@ describe('normalizeSerializedMarkdown', () => {
   // catch the regression.
   it('does not corrupt a backslash hard break', () => {
     expect(normalizeSerializedMarkdown('line one\\\nline two\n')).toBe('line one\\\nline two\n')
+  })
+})
+
+describe('empty paragraph serialization (no <br />)', () => {
+  // The reported "Enter inserts a hardbreak/<br />" bug. Pressing Enter creates a
+  // clean empty paragraph node (verified in the live editor); the `<br />` came
+  // from Milkdown's preserve-empty-line plugin serializing empty paragraphs to a
+  // literal `<br />`. Production removes that plugin (see index.ts), which
+  // makeEditor mirrors, so an empty paragraph must serialize as a blank line.
+  function insertEmptyParagraphAfterFirst(editor: Editor): void {
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const { state } = view
+      // Position just after the first block's closing boundary.
+      const firstBlockEnd = state.doc.child(0).nodeSize
+      const empty = state.schema.nodes.paragraph.create()
+      view.dispatch(state.tr.insert(firstBlockEnd, empty))
+    })
+  }
+
+  it('serializes an empty paragraph as a blank line, not <br />', async () => {
+    const editor = await makeEditor('First paragraph\n')
+    insertEmptyParagraphAfterFirst(editor)
+
+    const out = serializeWysiwygDoc(editor)
+    expect(out).not.toContain('<br />')
+    expect(out).toContain('First paragraph')
+  })
+
+  it('does not emit <br /> when serializing a freshly split paragraph', async () => {
+    // Two paragraphs with an empty one between them (the Enter-at-block-end shape).
+    const editor = await makeEditor('Above\n\nBelow\n')
+    insertEmptyParagraphAfterFirst(editor)
+
+    const out = serializeWysiwygDoc(editor)
+    expect(out).not.toContain('<br />')
   })
 })
 
