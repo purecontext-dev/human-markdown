@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.4 - 2026-06-01
+
+### Added
+- Bare URLs stay plain text in rich text; only explicit links (`<url>`, `[label](url)`) are clickable. Typing a URL followed by a space turns it into a link.
+- Pressing Enter at the end of a typed URL now auto-links it too, matching the space behavior.
+
+### Fixed
+- Empty paragraphs serialize as real blank lines instead of `<br />` — pressing Enter for a blank line no longer writes a hardbreak to disk.
+- Typed spaces now render correctly, including the space immediately after an auto-linked URL.
+- Toggling between rich text and raw, or receiving external edits, no longer introduces formatting drift on lines you didn't touch.
+
 ## 0.4.3 - 2026-05-25
 
 ### Fixed
