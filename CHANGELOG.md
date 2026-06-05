@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.7 - 2026-06-04
+
+### Added
+- Auto-save toggle in the editor toolbar. When enabled, the file saves automatically 2 seconds after you stop typing. Works in both rich text and raw mode. The setting persists as `humanMarkdown.autoSave` (off by default).
+
+### Fixed
+- Saving no longer briefly re-dirties the document. Previously, the save's own change event was misinterpreted as an external edit, causing VS Code to show an unsaved indicator immediately after saving.
+
 ## 0.4.6 - 2026-06-04
 
 ### Improved
