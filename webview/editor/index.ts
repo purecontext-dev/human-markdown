@@ -75,6 +75,7 @@ type ExtensionMessage =
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
   | { type: 'save-success' }
   | { type: 'save-failed' }
+  | { type: 'auto-save'; enabled: boolean }
 
 const vscode = acquireVsCodeApi()
 
@@ -97,6 +98,12 @@ let sourceMap: SourceMap | null = null
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
 const modeToggleBtn = document.getElementById('mode-toggle-btn') as HTMLButtonElement
+const autosaveCheckbox = document.getElementById('autosave-checkbox') as HTMLInputElement
+
+autosaveCheckbox.addEventListener('change', () => {
+  saveController.setAutoSave(autosaveCheckbox.checked)
+  vscode.postMessage({ type: 'auto-save-changed', enabled: autosaveCheckbox.checked })
+})
 
 const domBackend = new DomSearchBackend(() => previewContainer)
 const cmBackend = new CmSearchBackend(() => cmEditor)
@@ -195,6 +202,7 @@ function setMode(mode: 'preview' | 'raw') {
         currentContent = content
         setDirty(true)
         vscode.postMessage({ type: 'edit', content })
+        saveController.scheduleAutoSave()
       })
     } else {
       const cmContent = cmEditor.state.doc.toString()
@@ -285,6 +293,7 @@ async function initMilkdown(content: string) {
           currentContent = markdown
           setDirty(true)
           vscode.postMessage({ type: 'edit', content: markdown })
+          saveController.scheduleAutoSave()
         })
       })
       .use(commonmark)
@@ -503,6 +512,10 @@ window.addEventListener('message', (event) => {
       break
     case 'save-failed':
       saveController.handleFailure()
+      break
+    case 'auto-save':
+      autosaveCheckbox.checked = msg.enabled
+      saveController.setAutoSave(msg.enabled)
       break
   }
 })
