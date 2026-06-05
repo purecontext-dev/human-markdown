@@ -4,9 +4,40 @@ import { MarkdownEditorProvider } from './editor-provider'
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(MarkdownEditorProvider.register(context))
   offerReopenMarkdownFiles(context)
+  offerCursorEditorAssociation(context)
 }
 
 export function deactivate() {}
+
+export function offerCursorEditorAssociation(context: vscode.ExtensionContext) {
+  if (vscode.env.appName !== 'Cursor') return
+
+  const key = 'hasOfferedCursorFix'
+  if (context.globalState.get<boolean>(key)) return
+  context.globalState.update(key, true)
+
+  const config = vscode.workspace.getConfiguration('workbench')
+  const associations = config.get<Record<string, string>>('editorAssociations') ?? {}
+  if (associations['*.md'] === MarkdownEditorProvider.viewType) return
+
+  vscode.window
+    .showInformationMessage(
+      "Cursor's built-in markdown preview can conflict with Human Markdown. Set Human Markdown as the default editor for .md files?",
+      'Yes',
+      'No',
+    )
+    .then((choice) => {
+      if (choice !== 'Yes') return
+      const updated = { ...associations, '*.md': MarkdownEditorProvider.viewType }
+      config.update('editorAssociations', updated, vscode.ConfigurationTarget.Global).then(
+        () =>
+          vscode.window.showInformationMessage(
+            'Done — .md files will now open in Human Markdown by default.',
+          ),
+        (err) => vscode.window.showErrorMessage(`Failed to update editor association: ${err}`),
+      )
+    })
+}
 
 export function offerReopenMarkdownFiles(context: vscode.ExtensionContext) {
   const key = 'hasOfferedReopen'

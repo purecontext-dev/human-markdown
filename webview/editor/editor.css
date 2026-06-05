@@ -9,6 +9,37 @@ body {
   transition: background-color 0.15s ease;
 }
 
+#hm-banner {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 16px;
+  background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, 0.1));
+  border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, rgba(204, 204, 204, 0.7));
+  position: sticky;
+  top: 0;
+  z-index: 101;
+}
+
+body[data-host="cursor"] #hm-banner {
+  display: flex;
+}
+
+.hm-banner-label {
+  font-weight: 600;
+  color: var(--vscode-foreground, #ccc);
+  letter-spacing: 0.02em;
+}
+
+.hm-banner-hint {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
 #toolbar {
   display: flex;
   justify-content: flex-end;
@@ -21,16 +52,14 @@ body {
   z-index: 100;
 }
 
-.mode-toggle {
-  display: flex;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--vscode-button-border, rgba(128, 128, 128, 0.3));
+body[data-host="cursor"] #toolbar {
+  top: 25px;
 }
 
-.mode-btn {
+#mode-toggle-btn {
   padding: 2px 10px;
-  border: none;
+  border: 1px solid var(--vscode-button-border, rgba(128, 128, 128, 0.3));
+  border-radius: 4px;
   background: transparent;
   color: var(--vscode-foreground, #ccc);
   font-family: var(--vscode-font-family, sans-serif);
@@ -39,13 +68,8 @@ body {
   transition: background 0.1s ease, color 0.1s ease;
 }
 
-.mode-btn:hover {
+#mode-toggle-btn:hover {
   background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
-}
-
-.mode-btn.active {
-  background: var(--vscode-button-background, #0078d4);
-  color: var(--vscode-button-foreground, #fff);
 }
 
 #preview-container {
@@ -78,6 +102,10 @@ body {
   height: calc(100vh - 33px);
 }
 
+body[data-host="cursor"] .cm-editor {
+  height: calc(100vh - 58px);
+}
+
 .cm-editor .cm-scroller {
   font-family: var(--hm-cm-font-family) !important;
   font-size: var(--hm-cm-font-size) !important;
@@ -99,6 +127,10 @@ body {
   border-top: none;
   border-radius: 0 0 4px 4px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+body[data-host="cursor"] .find-bar {
+  top: 58px;
 }
 
 .find-bar.hidden {
