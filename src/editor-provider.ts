@@ -55,6 +55,8 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       },
     )
 
+    const noopCommand = vscode.commands.registerCommand('humanMarkdown.noop', () => {})
+
     const onConfigChange = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('humanMarkdown.theme')) {
         provider.broadcastTheme()
@@ -75,6 +77,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       toggleCommand,
       findCommand,
       selectThemeCommand,
+      noopCommand,
       onConfigChange,
       onColorThemeChange,
     )
@@ -425,6 +428,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       <span class="toggle-track"></span>
       <span class="toggle-label">Autosave</span>
     </label>
+    <div id="formatting-toolbar-slot"></div>
     <button id="mode-toggle-btn" data-mode="preview">View Source</button>
   </div>
   <div id="preview-container">

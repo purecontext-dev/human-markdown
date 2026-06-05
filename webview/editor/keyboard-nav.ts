@@ -21,6 +21,7 @@ export const keyboardNavPlugin = $prose((ctx: Ctx) => {
           return handleEscape(view)
         }
         if (event.key === 'Tab') {
+          if (isInsideListItem(view)) return false
           const moved = event.shiftKey ? moveToPreviousBlock(view) : moveToNextBlock(view)
           if (moved) event.preventDefault()
           return moved
@@ -132,5 +133,13 @@ function moveToPreviousBlock(view: EditorView): boolean {
     return true
   }
 
+  return false
+}
+
+function isInsideListItem(view: EditorView): boolean {
+  const { $from } = view.state.selection
+  for (let depth = $from.depth; depth > 0; depth--) {
+    if ($from.node(depth).type.name === 'list_item') return true
+  }
   return false
 }
