@@ -451,6 +451,7 @@ const saveController = new SaveController({
   postMessage: (msg) => vscode.postMessage(msg),
   hideConflict: () => conflictBar.hide(),
   showError: showSaveError,
+  isConflictActive: () => conflictBar.isVisible,
 })
 
 let scrollTimer: ReturnType<typeof setTimeout> | null = null

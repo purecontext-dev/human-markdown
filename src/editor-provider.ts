@@ -257,9 +257,13 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'auto-save-changed': {
+          const target = msg.enabled
           vscode.workspace
             .getConfiguration('humanMarkdown')
-            .update('autoSave', msg.enabled, vscode.ConfigurationTarget.Global)
+            .update('autoSave', target, vscode.ConfigurationTarget.Global)
+            .then(undefined, () => {
+              this.postMessage(webview, { type: 'auto-save', enabled: !target })
+            })
           break
         }
         case 'save': {
