@@ -96,12 +96,7 @@ let sourceMap: SourceMap | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
-const previewBtn = document.querySelector<HTMLButtonElement>(
-  '.mode-btn[data-mode="preview"]',
-) as HTMLButtonElement
-const rawBtn = document.querySelector<HTMLButtonElement>(
-  '.mode-btn[data-mode="raw"]',
-) as HTMLButtonElement
+const modeToggleBtn = document.getElementById('mode-toggle-btn') as HTMLButtonElement
 
 const domBackend = new DomSearchBackend(() => previewContainer)
 const cmBackend = new CmSearchBackend(() => cmEditor)
@@ -155,8 +150,8 @@ function setMode(mode: 'preview' | 'raw') {
   if (mode === 'preview') {
     previewContainer.classList.remove('hidden')
     cmContainer.classList.remove('active')
-    previewBtn.classList.add('active')
-    rawBtn.classList.remove('active')
+    modeToggleBtn.textContent = 'View Source'
+    modeToggleBtn.dataset.mode = 'preview'
 
     if (milkdownEditor && cmEditor) {
       const cmContent = cmEditor.state.doc.toString()
@@ -181,8 +176,8 @@ function setMode(mode: 'preview' | 'raw') {
   } else {
     previewContainer.classList.add('hidden')
     cmContainer.classList.add('active')
-    previewBtn.classList.remove('active')
-    rawBtn.classList.add('active')
+    modeToggleBtn.textContent = 'View Rendered'
+    modeToggleBtn.dataset.mode = 'raw'
 
     // Leaving WYSIWYG: the live Milkdown doc is authoritative. Read it directly
     // rather than trusting the debounced `currentContent` cache, which lags after
@@ -226,8 +221,7 @@ function toggleMode() {
   setMode(currentMode === 'preview' ? 'raw' : 'preview')
 }
 
-previewBtn.addEventListener('click', () => setMode('preview'))
-rawBtn.addEventListener('click', () => setMode('raw'))
+modeToggleBtn.addEventListener('click', toggleMode)
 
 previewContainer.addEventListener(
   'mousedown',
