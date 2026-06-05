@@ -8,16 +8,19 @@ export interface SaveControllerCallbacks {
 }
 
 const AUTO_SAVE_DELAY = 2000
+const MAX_AUTO_SAVE_RETRIES = 3
 
 export class SaveController {
   pendingSaveContent: string | null = null
   private autoSaveEnabled = false
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+  private autoSaveFailures = 0
 
   constructor(private cb: SaveControllerCallbacks) {}
 
   initiateSave() {
     this.clearAutoSaveTimer()
+    this.autoSaveFailures = 0
     this.pendingSaveContent = this.cb.getCurrentContent()
     this.cb.postMessage({ type: 'save', content: this.pendingSaveContent })
   }
@@ -29,12 +32,18 @@ export class SaveController {
       this.cb.hideConflict()
     }
     this.pendingSaveContent = null
+    this.autoSaveFailures = 0
     this.rescheduleIfDirty(savedContent)
   }
 
   handleFailure() {
+    const savedContent = this.pendingSaveContent
     this.pendingSaveContent = null
     this.cb.showError()
+    this.autoSaveFailures++
+    if (this.autoSaveFailures < MAX_AUTO_SAVE_RETRIES) {
+      this.rescheduleIfDirty(savedContent)
+    }
   }
 
   setAutoSave(enabled: boolean) {
