@@ -55,6 +55,8 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       },
     )
 
+    const noopCommand = vscode.commands.registerCommand('humanMarkdown.noop', () => {})
+
     const onConfigChange = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('humanMarkdown.theme')) {
         provider.broadcastTheme()
@@ -75,6 +77,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       toggleCommand,
       findCommand,
       selectThemeCommand,
+      noopCommand,
       onConfigChange,
       onColorThemeChange,
     )
