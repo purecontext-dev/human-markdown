@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.6 - 2026-06-04
+
+### Improved
+- Mode toggle redesigned as a single action button ("View Source" / "View Rendered") instead of a segmented control, making it visually distinct from Cursor's built-in "Preview | Markdown" toggle.
+- In Cursor, a "Human Markdown" banner appears at the top of the editor so users can tell at a glance which editor they're in, with guidance to use our toggle instead of Cursor's.
+- On first activation in Cursor, the extension offers to set Human Markdown as the default editor for `.md` files to prevent Cursor's built-in preview from taking over.
+
 ## 0.4.5 - 2026-06-01
 
 ### Improved
