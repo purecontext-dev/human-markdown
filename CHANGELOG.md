@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 - 2026-06-04
+
+### Added
+- Formatting toolbar in WYSIWYG mode with buttons for headings (H1-H3), bold, italic, strikethrough, inline code, bullet list, ordered list, and blockquote.
+- Keyboard shortcuts for all formatting actions now work without colliding with VS Code defaults (bold, italic, inline code, headings, lists, blockquote, strikethrough, code block).
+
+### Fixed
+- Tab key now indents/outdents list items instead of jumping between blocks. Outside of lists, Tab still navigates between blocks.
+
 ## 0.4.7 - 2026-06-04
 
 ### Added
