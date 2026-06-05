@@ -10,7 +10,7 @@ AI writes the markdown. Human Markdown makes it something you can actually read 
 
 ### Rich Text Editing
 
-Click into any block and edit directly in the rendered view. Headings, paragraphs, lists, blockquotes, images, links — all editable in place. No preview pane, no split view. Just the document.
+Click into any block and edit directly in the rendered view. Headings, paragraphs, lists, blockquotes, images, links — all editable in place. No preview pane, no split view. Just the document. Use keyboard shortcuts or the formatting toolbar to apply bold, italic, headings, lists, and more.
 
 ### Frontmatter Cards
 
@@ -77,6 +77,39 @@ Opens in under 200ms. Mode toggle under 100ms. Heavy renderers (Mermaid, KaTeX) 
 | Human Markdown: Toggle WYSIWYG / Raw | `Cmd+Shift+V` | Switch between rendered and raw |
 | Human Markdown: Find | `Cmd+F` | Search in the active mode |
 | Human Markdown: Select Theme | — | Pick a theme from the palette |
+
+### Keyboard Shortcuts
+
+The editor supports standard formatting shortcuts in WYSIWYG mode. A formatting toolbar is also available for mouse-driven editing.
+
+#### Inline Formatting
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl+B` | Bold |
+| `Cmd/Ctrl+I` | Italic |
+| `Cmd/Ctrl+E` | Inline code |
+| `Cmd/Ctrl+Alt+X` | Strikethrough |
+
+#### Block Formatting
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl+Alt+1` – `6` | Heading 1–6 |
+| `Cmd/Ctrl+Alt+0` | Paragraph (clear heading) |
+| `Cmd/Ctrl+Alt+8` | Bullet list |
+| `Cmd/Ctrl+Alt+7` | Ordered list |
+| `Cmd/Ctrl+Shift+B` | Blockquote |
+| `Cmd/Ctrl+Alt+C` | Code block |
+
+#### Lists
+
+| Shortcut | Action |
+|----------|--------|
+| `Tab` | Indent list item |
+| `Shift+Tab` | Outdent list item |
+| `Enter` | New list item |
+| `Enter` (empty item) | Exit list |
 
 ### Settings
 

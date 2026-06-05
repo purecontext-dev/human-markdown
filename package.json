@@ -94,12 +94,27 @@
         "when": "activeCustomEditorId == 'humanMarkdown.preview'"
       },
       {
+        "key": "ctrl+b",
+        "command": "humanMarkdown.noop",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
         "key": "cmd+e",
         "command": "humanMarkdown.noop",
         "when": "activeCustomEditorId == 'humanMarkdown.preview'"
       },
       {
+        "key": "ctrl+e",
+        "command": "humanMarkdown.noop",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
         "key": "cmd+shift+b",
+        "command": "humanMarkdown.noop",
+        "when": "activeCustomEditorId == 'humanMarkdown.preview'"
+      },
+      {
+        "key": "ctrl+shift+b",
         "command": "humanMarkdown.noop",
         "when": "activeCustomEditorId == 'humanMarkdown.preview'"
       }
