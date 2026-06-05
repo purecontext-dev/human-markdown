@@ -94,6 +94,11 @@
           "enum": ["wysiwyg", "raw"],
           "description": "Default mode when opening markdown files"
         },
+        "humanMarkdown.autoSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically save after changes (2 second delay)"
+        },
         "humanMarkdown.theme": {
           "type": "string",
           "default": "auto",

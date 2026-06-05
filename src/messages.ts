@@ -12,6 +12,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
   | { type: 'save-success' }
   | { type: 'save-failed' }
+  | { type: 'auto-save'; enabled: boolean }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }
@@ -23,6 +24,7 @@ export type WebviewToExtensionMessage =
   | { type: 'open-link'; href: string }
   | { type: 'resolve-image-uri'; src: string }
   | { type: 'save'; content: string }
+  | { type: 'auto-save-changed'; enabled: boolean }
 
 export interface WebviewState {
   scrollTop: number

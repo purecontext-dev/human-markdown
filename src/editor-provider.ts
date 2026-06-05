@@ -59,6 +59,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       if (e.affectsConfiguration('humanMarkdown.theme')) {
         provider.broadcastTheme()
       }
+      if (e.affectsConfiguration('humanMarkdown.autoSave')) {
+        provider.broadcastAutoSave()
+      }
     })
 
     const onColorThemeChange = vscode.window.onDidChangeActiveColorTheme(() => {
@@ -167,6 +170,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             type: 'set-mode',
             mode: defaultMode === 'raw' ? 'raw' : 'preview',
           })
+          this.postMessage(webview, {
+            type: 'auto-save',
+            enabled: vscode.workspace
+              .getConfiguration('humanMarkdown')
+              .get<boolean>('autoSave', false),
+          })
           const saved = this.savedStates.get(document.uri.toString())
           if (saved) {
             this.postMessage(webview, { type: 'restore-state', state: saved })
@@ -247,6 +256,16 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           })
           break
         }
+        case 'auto-save-changed': {
+          const target = msg.enabled
+          vscode.workspace
+            .getConfiguration('humanMarkdown')
+            .update('autoSave', target, vscode.ConfigurationTarget.Global)
+            .then(undefined, () => {
+              this.postMessage(webview, { type: 'auto-save', enabled: !target })
+            })
+          break
+        }
         case 'save': {
           const doSave = () => {
             isSaving = true
@@ -294,6 +313,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const onDocChange = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return
       if (suppressDepth > 0) return
+      if (isSaving) return
       const newContent = document.getText()
       if (webviewIsDirty) {
         if (!tryMergeExternal(newContent)) {
@@ -338,6 +358,15 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const tokens = resolveThemeTokens(getConfiguredThemeName())
     for (const webview of this.webviews) {
       this.postMessage(webview, { type: 'theme', tokens })
+    }
+  }
+
+  private broadcastAutoSave() {
+    const enabled = vscode.workspace
+      .getConfiguration('humanMarkdown')
+      .get<boolean>('autoSave', false)
+    for (const webview of this.webviews) {
+      this.postMessage(webview, { type: 'auto-save', enabled })
     }
   }
 
@@ -391,6 +420,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     <span class="hm-banner-hint" title="Cursor has its own markdown toggle in the tab bar. Use the button below to switch modes — Cursor's toggle will switch you out of Human Markdown.">Use the toggle below to switch modes</span>
   </div>
   <div id="toolbar">
+    <label id="autosave-toggle" class="toggle-switch">
+      <input type="checkbox" id="autosave-checkbox">
+      <span class="toggle-track"></span>
+      <span class="toggle-label">Autosave</span>
+    </label>
     <button id="mode-toggle-btn" data-mode="preview">View Source</button>
   </div>
   <div id="preview-container">
