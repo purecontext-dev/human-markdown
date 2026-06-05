@@ -313,6 +313,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const onDocChange = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return
       if (suppressDepth > 0) return
+      if (isSaving) return
       const newContent = document.getText()
       if (webviewIsDirty) {
         if (!tryMergeExternal(newContent)) {
