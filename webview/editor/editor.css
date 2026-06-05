@@ -104,6 +104,69 @@ body[data-host="cursor"] #toolbar {
   user-select: none;
 }
 
+/* Formatting toolbar */
+#formatting-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-right: 12px;
+}
+
+#formatting-toolbar.hidden {
+  display: none;
+}
+
+.fmt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-foreground, #ccc);
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.fmt-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+}
+
+.fmt-btn.fmt-bold {
+  font-weight: 700;
+}
+
+.fmt-btn.fmt-italic {
+  font-style: italic;
+}
+
+.fmt-btn.fmt-strike {
+  text-decoration: line-through;
+}
+
+.fmt-btn.fmt-code {
+  font-family: var(--hm-cm-font-family, Menlo, Monaco, Courier New, monospace);
+  font-size: 10px;
+  letter-spacing: -0.5px;
+}
+
+.fmt-btn.fmt-heading {
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.fmt-sep {
+  width: 1px;
+  height: 14px;
+  margin: 0 4px;
+  background: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+}
+
 #mode-toggle-btn {
   padding: 2px 10px;
   border: 1px solid var(--vscode-button-border, rgba(128, 128, 128, 0.3));

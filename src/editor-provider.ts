@@ -428,6 +428,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       <span class="toggle-track"></span>
       <span class="toggle-label">Autosave</span>
     </label>
+    <div id="formatting-toolbar-slot"></div>
     <button id="mode-toggle-btn" data-mode="preview">View Source</button>
   </div>
   <div id="preview-container">

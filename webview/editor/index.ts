@@ -19,6 +19,7 @@ import { codeBlockView } from './code-block-view'
 import { CmSearchBackend, createCodeMirrorEditor } from './codemirror-editor'
 import { ConflictBar } from './conflict-bar'
 import { DomSearchBackend, FindBar } from './find-bar'
+import { FormattingToolbar } from './formatting-toolbar'
 import {
   frontmatterNodeSchema,
   frontmatterView,
@@ -100,6 +101,10 @@ const cmContainer = document.getElementById('codemirror-container') as HTMLEleme
 const modeToggleBtn = document.getElementById('mode-toggle-btn') as HTMLButtonElement
 const autosaveCheckbox = document.getElementById('autosave-checkbox') as HTMLInputElement
 
+const formattingToolbar = new FormattingToolbar(() => milkdownEditor)
+const toolbarSlot = document.getElementById('formatting-toolbar-slot')
+if (toolbarSlot) toolbarSlot.appendChild(formattingToolbar.element)
+
 autosaveCheckbox.addEventListener('change', () => {
   saveController.setAutoSave(autosaveCheckbox.checked)
   vscode.postMessage({ type: 'auto-save-changed', enabled: autosaveCheckbox.checked })
@@ -159,6 +164,7 @@ function setMode(mode: 'preview' | 'raw') {
     cmContainer.classList.remove('active')
     modeToggleBtn.textContent = 'View Source'
     modeToggleBtn.dataset.mode = 'preview'
+    formattingToolbar.show()
 
     if (milkdownEditor && cmEditor) {
       const cmContent = cmEditor.state.doc.toString()
@@ -185,6 +191,7 @@ function setMode(mode: 'preview' | 'raw') {
     cmContainer.classList.add('active')
     modeToggleBtn.textContent = 'View Rendered'
     modeToggleBtn.dataset.mode = 'raw'
+    formattingToolbar.hide()
 
     // Leaving WYSIWYG: the live Milkdown doc is authoritative. Read it directly
     // rather than trusting the debounced `currentContent` cache, which lags after
