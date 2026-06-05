@@ -13,6 +13,8 @@ export type ExtensionToWebviewMessage =
   | { type: 'save-success' }
   | { type: 'save-failed' }
   | { type: 'auto-save'; enabled: boolean }
+  | { type: 'undo' }
+  | { type: 'redo' }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }

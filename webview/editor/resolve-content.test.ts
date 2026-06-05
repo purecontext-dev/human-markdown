@@ -11,7 +11,6 @@ import {
   schemaCtx,
   serializerCtx,
 } from '@milkdown/core'
-import { replaceAll } from '@milkdown/kit/utils'
 import { commonmark, linkSchema, remarkPreserveEmptyLinePlugin } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -21,6 +20,7 @@ import {
   patchRemarkForGithubAlerts,
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
+import { replaceAllFlush } from './history-plugin'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import {
   normalizeSerializedMarkdown,
@@ -169,7 +169,7 @@ describe('resolveWysiwygContent', () => {
       const para = state.schema.nodes.paragraph.create(null, state.schema.text('scratch'))
       view.dispatch(state.tr.insert(state.doc.content.size, para))
     })
-    editor.action(replaceAll(content, true))
+    editor.action(replaceAllFlush(content))
 
     // Live serialization now equals the original baseline, so disk bytes (not the
     // re-serialized form) come back — compared against the baseline from load time.
@@ -183,7 +183,7 @@ describe('resolveWysiwygContent', () => {
 
     // Simulate the host pushing new disk bytes (external file change).
     const updated = fixture('gfm-features')
-    editor.action(replaceAll(updated, true))
+    editor.action(replaceAllFlush(updated))
     const newBaseline = serializeWysiwygDoc(editor)
 
     // No WYSIWYG edit after the update. Must return the new disk bytes verbatim,
@@ -200,7 +200,7 @@ describe('resolveWysiwygContent', () => {
     const rawText = 'Visit http://example.com now\n'
     // Confirm the serializer would otherwise drift this (guards the test's premise).
     const editor = await makeEditor('placeholder\n')
-    editor.action(replaceAll(rawText, true))
+    editor.action(replaceAllFlush(rawText))
     const driftedBaseline = serializeWysiwygDoc(editor)
     expect(driftedBaseline).not.toBe(rawText)
 

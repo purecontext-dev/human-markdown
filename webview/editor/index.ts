@@ -1,3 +1,4 @@
+import { redo as cmRedo, undo as cmUndo } from '@codemirror/commands'
 import { Transaction } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import {
@@ -7,7 +8,6 @@ import {
   remarkStringifyOptionsCtx,
   rootCtx,
 } from '@milkdown/core'
-import { replaceAll } from '@milkdown/kit/utils'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark, remarkPreserveEmptyLinePlugin } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
@@ -32,6 +32,14 @@ import {
   patchRemarkForGithubAlerts,
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
+import {
+  executeRedo,
+  executeUndo,
+  historyCursorBreak,
+  historyKeymap,
+  historyPlugin,
+  replaceAllNoHistory,
+} from './history-plugin'
 import { createImageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
 import { linkInputRule } from './link-input-rule'
@@ -77,6 +85,8 @@ type ExtensionMessage =
   | { type: 'save-success' }
   | { type: 'save-failed' }
   | { type: 'auto-save'; enabled: boolean }
+  | { type: 'undo' }
+  | { type: 'redo' }
 
 const vscode = acquireVsCodeApi()
 
@@ -172,7 +182,7 @@ function setMode(mode: 'preview' | 'raw') {
       syncingContent = true
       suppressMilkdownUpdate = true
       try {
-        milkdownEditor.action(replaceAll(cmContent))
+        milkdownEditor.action(replaceAllNoHistory(cmContent))
       } catch {
         // ignore
       }
@@ -291,11 +301,11 @@ async function initMilkdown(content: string) {
           const markdown = normalizeSerializedMarkdown(rawMarkdown)
           // The markdownUpdated listener is debounced (200ms in plugin-listener),
           // so it outlives the synchronous suppress flags and fires for the echo
-          // of a programmatic load (replaceAll at raw->preview or external update).
-          // That echo is the *serialized* form, which can differ from the faithful
-          // raw bytes (e.g. `http://` -> `http\://`). If the update equals the load
-          // baseline, it is that echo, not a user edit — ignore it so currentContent
-          // keeps the faithful raw text and the doc is not falsely marked dirty.
+          // of a programmatic load (mode toggle or external update). That echo is
+          // the *serialized* form, which can differ from the faithful raw bytes
+          // (e.g. `http://` -> `http\://`). If the update equals the load baseline,
+          // it is that echo, not a user edit — ignore it so currentContent keeps the
+          // faithful raw text and the doc is not falsely marked dirty.
           if (markdown === baselineSerialized) return
           currentContent = markdown
           setDirty(true)
@@ -327,6 +337,9 @@ async function initMilkdown(content: string) {
       .use(bareUrlParsePlugin)
       .use(bareUrlStringifyPlugin)
       .use(linkInputRule)
+      .use(historyPlugin)
+      .use(historyKeymap)
+      .use(historyCursorBreak)
       .create()
 
     // Remove Milkdown's "preserve empty line" plugin (bundled in `commonmark`).
@@ -374,7 +387,7 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
     syncingContent = true
     suppressMilkdownUpdate = true
     try {
-      milkdownEditor.action(replaceAll(content, true))
+      milkdownEditor.action(replaceAllNoHistory(content))
     } catch (err) {
       const root = document.getElementById('editor')
       if (root) renderFallback(root, content, err)
@@ -524,6 +537,20 @@ window.addEventListener('message', (event) => {
     case 'auto-save':
       autosaveCheckbox.checked = msg.enabled
       saveController.setAutoSave(msg.enabled)
+      break
+    case 'undo':
+      if (currentMode === 'preview' && milkdownEditor) {
+        milkdownEditor.action(executeUndo)
+      } else if (cmEditor) {
+        cmUndo(cmEditor)
+      }
+      break
+    case 'redo':
+      if (currentMode === 'preview' && milkdownEditor) {
+        milkdownEditor.action(executeRedo)
+      } else if (cmEditor) {
+        cmRedo(cmEditor)
+      }
       break
   }
 })

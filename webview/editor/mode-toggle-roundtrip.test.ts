@@ -7,7 +7,6 @@ import {
   remarkStringifyOptionsCtx,
   rootCtx,
 } from '@milkdown/core'
-import { replaceAll } from '@milkdown/kit/utils'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
@@ -18,6 +17,7 @@ import {
   patchRemarkForGithubAlerts,
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
+import { replaceAllNoHistory } from './history-plugin'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
 import { resolveWysiwygContent, serializeWysiwygDoc } from './resolve-content'
 
@@ -87,7 +87,7 @@ class Harness {
     this.currentContent = rawText
     this.syncingContent = true
     this.suppressMilkdownUpdate = true
-    this.editor.action(replaceAll(rawText))
+    this.editor.action(replaceAllNoHistory(rawText))
     this.suppressMilkdownUpdate = false
     this.syncingContent = false
     this.baselineSerialized = serializeWysiwygDoc(this.editor)
