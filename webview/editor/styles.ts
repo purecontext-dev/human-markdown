@@ -359,6 +359,8 @@ const editorCSS = `
     border: none;
     border-radius: 0;
     overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 
   .milkdown .frontmatter-block.editing .frontmatter-rendered {
@@ -370,6 +372,8 @@ const editorCSS = `
     padding: 1em;
     border: none;
     background: none;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 
   .milkdown .frontmatter-body > pre code,
