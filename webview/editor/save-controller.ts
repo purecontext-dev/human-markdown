@@ -5,6 +5,7 @@ export interface SaveControllerCallbacks {
   hideConflict: () => void
   showError: () => void
   isConflictActive: () => boolean
+  showConflict: () => void
 }
 
 const AUTO_SAVE_DELAY = 2000
@@ -15,6 +16,7 @@ export class SaveController {
   private autoSaveEnabled = false
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null
   private autoSaveFailures = 0
+  private autoSaveBlockedUntil = 0
 
   constructor(private cb: SaveControllerCallbacks) {}
 
@@ -39,6 +41,7 @@ export class SaveController {
   handleFailure() {
     const savedContent = this.pendingSaveContent
     this.pendingSaveContent = null
+    this.cb.showConflict()
     this.cb.showError()
     this.autoSaveFailures++
     if (this.autoSaveFailures < MAX_AUTO_SAVE_RETRIES) {
@@ -66,8 +69,19 @@ export class SaveController {
       this.autoSaveTimer = null
       if (this.pendingSaveContent !== null) return
       if (this.cb.isConflictActive()) return
+      if (Date.now() < this.autoSaveBlockedUntil) {
+        this.scheduleAutoSave()
+        return
+      }
       this.initiateSave()
     }, AUTO_SAVE_DELAY)
+  }
+
+  deferAutoSave(ms: number) {
+    this.autoSaveBlockedUntil = Math.max(this.autoSaveBlockedUntil, Date.now() + ms)
+    if (this.autoSaveEnabled && this.pendingSaveContent === null && !this.cb.isConflictActive()) {
+      this.scheduleAutoSave()
+    }
   }
 
   private rescheduleIfDirty(savedContent: string | null) {

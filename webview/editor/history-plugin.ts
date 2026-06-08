@@ -28,6 +28,14 @@ const cursorBreakKey = new PluginKey('history-cursor-break')
 
 export const historyCursorBreak = $prose((_ctx: Ctx) => {
   let idleTimer: ReturnType<typeof setTimeout> | null = null
+  let closeTimer: ReturnType<typeof setTimeout> | null = null
+
+  const closeSoon = (view: { state: EditorState; dispatch: (tr: EditorState['tr']) => void }) => {
+    if (closeTimer) clearTimeout(closeTimer)
+    closeTimer = setTimeout(() => {
+      view.dispatch(closeHistory(view.state.tr))
+    }, 0)
+  }
 
   return new Plugin({
     key: cursorBreakKey,
@@ -43,6 +51,7 @@ export const historyCursorBreak = $prose((_ctx: Ctx) => {
         },
         destroy() {
           if (idleTimer) clearTimeout(idleTimer)
+          if (closeTimer) clearTimeout(closeTimer)
         },
       }
     },
@@ -54,6 +63,11 @@ export const historyCursorBreak = $prose((_ctx: Ctx) => {
         },
       },
       handleKeyDown(view, event) {
+        if ((event.key === 'Backspace' || event.key === 'Delete') && !view.state.selection.empty) {
+          view.dispatch(closeHistory(view.state.tr))
+          closeSoon(view)
+          return false
+        }
         if (
           event.key === 'ArrowUp' ||
           event.key === 'ArrowDown' ||
@@ -87,14 +101,17 @@ export function replaceAllNoHistory(markdown: string) {
 
 export function executeUndo(ctx: Ctx) {
   const view = ctx.get(editorViewCtx)
-  undo(view.state, view.dispatch)
+  return undo(view.state, view.dispatch)
 }
 
 export function executeRedo(ctx: Ctx) {
   const view = ctx.get(editorViewCtx)
-  redo(view.state, view.dispatch)
+  return redo(view.state, view.dispatch)
 }
 
+// Full-document reloads from raw mode or disk should start a fresh undo stack.
+// Using addToHistory=false alone can leave old edit groups mapped through the
+// replacement, so production reload paths use this state reset instead.
 export function replaceAllFlush(markdown: string) {
   return (ctx: Ctx) => {
     const view = ctx.get(editorViewCtx)

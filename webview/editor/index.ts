@@ -36,9 +36,8 @@ import {
   executeRedo,
   executeUndo,
   historyCursorBreak,
-  historyKeymap,
   historyPlugin,
-  replaceAllNoHistory,
+  replaceAllFlush,
 } from './history-plugin'
 import { createImageView } from './image-view'
 import { keyboardNavPlugin } from './keyboard-nav'
@@ -100,6 +99,10 @@ let currentMode: 'preview' | 'raw' = 'preview'
 let webviewDirty = false
 let initInProgress = false
 let pendingContent: string | null = null
+let webviewEditRevision = 0
+let ignoreMilkdownUpdatesUntil = 0
+let ignoreMilkdownUpdatesTimer: ReturnType<typeof setTimeout> | null = null
+const ignoredMarkdownSnapshots = new Set<string>()
 // Serialization of the doc as last loaded from disk. Lets the content resolver
 // distinguish a genuine WYSIWYG edit (serialize live) from an unedited doc
 // (return faithful disk bytes), avoiding round-trip drift. See resolve-content.ts.
@@ -131,6 +134,22 @@ function setDirty(dirty: boolean) {
   if (dirty === webviewDirty) return
   webviewDirty = dirty
   vscode.postMessage({ type: 'dirty-state', isDirty: dirty })
+}
+
+function postEdit(content: string, origin: 'history' | 'edit' = 'edit') {
+  webviewEditRevision += 1
+  vscode.postMessage({ type: 'edit', content, revision: webviewEditRevision, origin })
+}
+
+function pauseMilkdownListenerAfterHistoryCommand() {
+  ignoreMilkdownUpdatesUntil = Date.now() + 750
+  saveController.deferAutoSave(750)
+  if (ignoreMilkdownUpdatesTimer) clearTimeout(ignoreMilkdownUpdatesTimer)
+  ignoreMilkdownUpdatesTimer = setTimeout(() => {
+    if (Date.now() >= ignoreMilkdownUpdatesUntil) {
+      ignoreMilkdownUpdatesUntil = 0
+    }
+  }, 750)
 }
 
 const conflictBar = new ConflictBar(
@@ -182,7 +201,7 @@ function setMode(mode: 'preview' | 'raw') {
       syncingContent = true
       suppressMilkdownUpdate = true
       try {
-        milkdownEditor.action(replaceAllNoHistory(cmContent))
+        milkdownEditor.action(replaceAllFlush(cmContent))
       } catch {
         // ignore
       }
@@ -218,7 +237,7 @@ function setMode(mode: 'preview' | 'raw') {
         if (suppressCmUpdate) return
         currentContent = content
         setDirty(true)
-        vscode.postMessage({ type: 'edit', content })
+        postEdit(content)
         saveController.scheduleAutoSave()
       })
     } else {
@@ -296,9 +315,15 @@ async function initMilkdown(content: string) {
         })
         ctx.get(listenerCtx).markdownUpdated((_ctx, rawMarkdown, _prev) => {
           if (suppressMilkdownUpdate || syncingContent) return
+          if (Date.now() < ignoreMilkdownUpdatesUntil) return
           // Normalize so the saved bytes match the toggle/save serialization and
           // the dirty-detection baseline (all go through normalizeSerializedMarkdown).
           const markdown = normalizeSerializedMarkdown(rawMarkdown)
+          if (ignoredMarkdownSnapshots.delete(markdown)) return
+          // Listener updates are debounced. If undo/redo or another edit changed
+          // the document after this snapshot was queued, do not let stale bytes
+          // overwrite the live editor state or the backing TextDocument.
+          if (milkdownEditor && markdown !== serializeWysiwygDoc(milkdownEditor)) return
           // The markdownUpdated listener is debounced (200ms in plugin-listener),
           // so it outlives the synchronous suppress flags and fires for the echo
           // of a programmatic load (mode toggle or external update). That echo is
@@ -309,7 +334,7 @@ async function initMilkdown(content: string) {
           if (markdown === baselineSerialized) return
           currentContent = markdown
           setDirty(true)
-          vscode.postMessage({ type: 'edit', content: markdown })
+          postEdit(markdown)
           saveController.scheduleAutoSave()
         })
       })
@@ -338,7 +363,6 @@ async function initMilkdown(content: string) {
       .use(bareUrlStringifyPlugin)
       .use(linkInputRule)
       .use(historyPlugin)
-      .use(historyKeymap)
       .use(historyCursorBreak)
       .create()
 
@@ -387,7 +411,7 @@ function updateContent(content: string, opts?: { keepDirty?: boolean }) {
     syncingContent = true
     suppressMilkdownUpdate = true
     try {
-      milkdownEditor.action(replaceAllNoHistory(content))
+      milkdownEditor.action(replaceAllFlush(content))
     } catch (err) {
       const root = document.getElementById('editor')
       if (root) renderFallback(root, content, err)
@@ -465,11 +489,53 @@ function getAuthoritativeContent(): string {
   return currentContent
 }
 
+function syncWysiwygHistoryCommand(staleSnapshot: string | null) {
+  if (!milkdownEditor) return
+  const content = resolveWysiwygContent(
+    milkdownEditor,
+    currentContent,
+    baselineSerialized,
+    sourceMap,
+  )
+  if (staleSnapshot && staleSnapshot !== content) {
+    ignoredMarkdownSnapshots.add(staleSnapshot)
+  }
+  currentContent = content
+  setDirty(true)
+  postEdit(content, 'history')
+  saveController.scheduleAutoSave()
+}
+
+function undoCurrentMode() {
+  if (currentMode === 'preview' && milkdownEditor) {
+    const staleSnapshot = serializeWysiwygDoc(milkdownEditor)
+    if (milkdownEditor.action(executeUndo)) {
+      pauseMilkdownListenerAfterHistoryCommand()
+      syncWysiwygHistoryCommand(staleSnapshot)
+    }
+  } else if (cmEditor) {
+    cmUndo(cmEditor)
+  }
+}
+
+function redoCurrentMode() {
+  if (currentMode === 'preview' && milkdownEditor) {
+    const staleSnapshot = serializeWysiwygDoc(milkdownEditor)
+    if (milkdownEditor.action(executeRedo)) {
+      pauseMilkdownListenerAfterHistoryCommand()
+      syncWysiwygHistoryCommand(staleSnapshot)
+    }
+  } else if (cmEditor) {
+    cmRedo(cmEditor)
+  }
+}
+
 const saveController = new SaveController({
   getCurrentContent: getAuthoritativeContent,
   setDirty,
   postMessage: (msg) => vscode.postMessage(msg),
   hideConflict: () => conflictBar.hide(),
+  showConflict: () => conflictBar.show(),
   showError: showSaveError,
   isConflictActive: () => conflictBar.isVisible,
 })
@@ -539,18 +605,10 @@ window.addEventListener('message', (event) => {
       saveController.setAutoSave(msg.enabled)
       break
     case 'undo':
-      if (currentMode === 'preview' && milkdownEditor) {
-        milkdownEditor.action(executeUndo)
-      } else if (cmEditor) {
-        cmUndo(cmEditor)
-      }
+      undoCurrentMode()
       break
     case 'redo':
-      if (currentMode === 'preview' && milkdownEditor) {
-        milkdownEditor.action(executeRedo)
-      } else if (cmEditor) {
-        cmRedo(cmEditor)
-      }
+      redoCurrentMode()
       break
   }
 })
@@ -561,14 +619,24 @@ document.addEventListener(
   'keydown',
   (e) => {
     if (!(e.metaKey || e.ctrlKey)) return
-    if (e.key === 'f') {
+    const key = e.key.toLowerCase()
+    if (key === 'z') {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.shiftKey) redoCurrentMode()
+      else undoCurrentMode()
+    } else if (key === 'y' && !e.shiftKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      redoCurrentMode()
+    } else if (key === 'f') {
       e.preventDefault()
       findBar.show()
-    } else if (e.key === 'g' && findBar.isVisible) {
+    } else if (key === 'g' && findBar.isVisible) {
       e.preventDefault()
       if (e.shiftKey) findBar.prev()
       else findBar.next()
-    } else if (e.key === 's') {
+    } else if (key === 's') {
       e.preventDefault()
       saveController.initiateSave()
     }

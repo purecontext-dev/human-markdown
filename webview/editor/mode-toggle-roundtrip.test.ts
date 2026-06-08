@@ -17,9 +17,13 @@ import {
   patchRemarkForGithubAlerts,
   remarkGithubAlertsPlugin,
 } from './github-alert-plugin'
-import { replaceAllNoHistory } from './history-plugin'
+import { replaceAllFlush } from './history-plugin'
 import { mathDisplaySchema, mathInlineSchema, remarkMathPlugin } from './math-plugin'
-import { resolveWysiwygContent, serializeWysiwygDoc } from './resolve-content'
+import {
+  normalizeSerializedMarkdown,
+  resolveWysiwygContent,
+  serializeWysiwygDoc,
+} from './resolve-content'
 
 /**
  * Faithfully models the mode-toggle content flow from index.ts, including the
@@ -55,9 +59,12 @@ class Harness {
         ctx.set(rootCtx, h.root)
         ctx.set(defaultValueCtx, initial)
         ctx.set(remarkStringifyOptionsCtx, { bullet: '-', rule: '-' })
-        // Mirrors index.ts markdownUpdated listener, including the echo guard.
-        ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
+        // Mirrors index.ts markdownUpdated listener, including the stale snapshot
+        // and programmatic-load echo guards.
+        ctx.get(listenerCtx).markdownUpdated((_ctx, rawMarkdown) => {
           if (h.suppressMilkdownUpdate || h.syncingContent) return
+          const markdown = normalizeSerializedMarkdown(rawMarkdown)
+          if (markdown !== serializeWysiwygDoc(h.editor)) return
           if (markdown === h.baselineSerialized) return
           h.currentContent = markdown
           h.dirty = true
@@ -87,7 +94,7 @@ class Harness {
     this.currentContent = rawText
     this.syncingContent = true
     this.suppressMilkdownUpdate = true
-    this.editor.action(replaceAllNoHistory(rawText))
+    this.editor.action(replaceAllFlush(rawText))
     this.suppressMilkdownUpdate = false
     this.syncingContent = false
     this.baselineSerialized = serializeWysiwygDoc(this.editor)

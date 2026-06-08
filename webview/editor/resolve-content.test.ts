@@ -27,6 +27,7 @@ import {
   resolveWysiwygContent,
   serializeWysiwygDoc,
 } from './resolve-content'
+import { buildSourceMap } from './source-splice'
 
 const fixturesDir = join(__dirname, '__fixtures__')
 
@@ -174,6 +175,22 @@ describe('resolveWysiwygContent', () => {
     // Live serialization now equals the original baseline, so disk bytes (not the
     // re-serialized form) come back — compared against the baseline from load time.
     const resolved = resolveWysiwygContent(editor, content, baseline)
+    expect(resolved).toBe(content)
+  })
+
+  it('returns original disk bytes after final undo even when the cache is stale', async () => {
+    const content = 'Deploy crawler to production\n'
+    const editor = await makeEditor(content)
+    const baseline = serializeWysiwygDoc(editor)
+    if (!baseline) throw new Error('missing baseline')
+
+    appendParagraph(editor, 'scratch')
+    editor.action(replaceAllFlush(content))
+
+    const staleCache = 'Deploy crawler to\n'
+    const sourceMap = buildSourceMap(content, baseline)
+    const resolved = resolveWysiwygContent(editor, staleCache, baseline, sourceMap)
+
     expect(resolved).toBe(content)
   })
 
