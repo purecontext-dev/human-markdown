@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1 - 2026-06-08
+
+### Fixed
+- WYSIWYG undo/redo now restores selected-text deletions one step at a time and persists the final undo state when saving, closing, or reopening a document.
+- Auto-save and manual save now wait for pending rich-text/raw editor updates before saving, preventing stale content from being written after undo.
+- Long frontmatter lines now wrap instead of clipping.
+
 ## 0.5.0 - 2026-06-04
 
 ### Added
