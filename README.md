@@ -6,6 +6,8 @@ AI writes the markdown. Human Markdown makes it something you can actually read 
 
 ![Frontmatter and prose rendering](demo/1-frontmatter.png)
 
+> **Cursor users:** Cursor adds a "Preview | Markdown" toggle to the tab bar for `.md` files. That toggle switches you out of Human Markdown into Cursor's built-in viewer. Use Human Markdown's own toggle (toolbar button or `Cmd+Shift+V`) to switch between rich text and raw markdown.
+
 ## Features
 
 ### Rich Text Editing
