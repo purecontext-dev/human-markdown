@@ -7,6 +7,7 @@ describe('SaveController', () => {
   let conflictActive: boolean
   let postMessage: ReturnType<typeof vi.fn>
   let hideConflict: ReturnType<typeof vi.fn>
+  let showConflict: ReturnType<typeof vi.fn>
   let showError: ReturnType<typeof vi.fn>
   let ctrl: SaveController
 
@@ -16,6 +17,9 @@ describe('SaveController', () => {
     conflictActive = false
     postMessage = vi.fn()
     hideConflict = vi.fn()
+    showConflict = vi.fn(() => {
+      conflictActive = true
+    })
     showError = vi.fn()
     ctrl = new SaveController({
       getCurrentContent: () => content,
@@ -24,6 +28,7 @@ describe('SaveController', () => {
       },
       postMessage,
       hideConflict,
+      showConflict,
       showError,
       isConflictActive: () => conflictActive,
     })
@@ -62,6 +67,7 @@ describe('SaveController', () => {
   it('handleFailure shows error and clears pending state', () => {
     ctrl.initiateSave()
     ctrl.handleFailure()
+    expect(showConflict).toHaveBeenCalledOnce()
     expect(showError).toHaveBeenCalledOnce()
     expect(ctrl.pendingSaveContent).toBeNull()
     expect(dirty).toBe(true)
@@ -116,6 +122,17 @@ describe('SaveController', () => {
       expect(postMessage).not.toHaveBeenCalled()
     })
 
+    it('deferAutoSave pushes an active auto-save timer out', () => {
+      ctrl.setAutoSave(true)
+      ctrl.scheduleAutoSave()
+      vi.advanceTimersByTime(1000)
+      ctrl.deferAutoSave(750)
+      vi.advanceTimersByTime(1000)
+      expect(postMessage).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(1000)
+      expect(postMessage).toHaveBeenCalledWith({ type: 'save', content: 'hello' })
+    })
+
     it('timer callback bails if conflict becomes active before firing', () => {
       ctrl.setAutoSave(true)
       ctrl.scheduleAutoSave()
@@ -137,22 +154,22 @@ describe('SaveController', () => {
       ctrl.handleFailure()
       content = 'changed'
       ctrl.handleFailure()
-      // Still under retry cap since manual save reset it
+      // Save failure activates conflict state, so auto-save should not retry.
       vi.advanceTimersByTime(2000)
-      expect(postMessage).toHaveBeenCalledWith({ type: 'save', content: 'changed' })
+      expect(postMessage).not.toHaveBeenCalled()
     })
 
-    it('handleFailure reschedules when content is dirty', () => {
+    it('handleFailure does not reschedule while conflict is active', () => {
       ctrl.setAutoSave(true)
       ctrl.scheduleAutoSave()
       vi.advanceTimersByTime(2000)
       content = 'changed'
       ctrl.handleFailure()
       vi.advanceTimersByTime(2000)
-      expect(postMessage).toHaveBeenCalledTimes(2)
+      expect(postMessage).toHaveBeenCalledTimes(1)
     })
 
-    it('handleFailure stops retrying after max attempts', () => {
+    it('handleFailure stops retrying after conflict activation', () => {
       ctrl.setAutoSave(true)
       content = 'dirty'
       for (let i = 0; i < 3; i++) {
@@ -160,9 +177,8 @@ describe('SaveController', () => {
         vi.advanceTimersByTime(2000)
         ctrl.handleFailure()
       }
-      // After 3 failures, should not reschedule
       vi.advanceTimersByTime(2000)
-      expect(postMessage).toHaveBeenCalledTimes(3)
+      expect(postMessage).toHaveBeenCalledTimes(1)
     })
 
     it('setAutoSave(false) clears pending timer', () => {

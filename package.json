@@ -50,6 +50,14 @@
       {
         "command": "humanMarkdown.noop",
         "title": "Human Markdown: No-op (internal)"
+      },
+      {
+        "command": "humanMarkdown.undo",
+        "title": "Human Markdown: Undo"
+      },
+      {
+        "command": "humanMarkdown.redo",
+        "title": "Human Markdown: Redo"
       }
     ],
     "keybindings": [

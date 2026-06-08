@@ -13,10 +13,12 @@ export type ExtensionToWebviewMessage =
   | { type: 'save-success' }
   | { type: 'save-failed' }
   | { type: 'auto-save'; enabled: boolean }
+  | { type: 'undo' }
+  | { type: 'redo' }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }
-  | { type: 'edit'; content: string }
+  | { type: 'edit'; content: string; revision: number; origin?: 'history' | 'edit' }
   | { type: 'dirty-state'; isDirty: boolean }
   | { type: 'accept-external' }
   | { type: 'keep-mine'; content: string }

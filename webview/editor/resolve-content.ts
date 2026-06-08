@@ -61,7 +61,7 @@ export function resolveWysiwygContent(
   if (!editor) return cachedContent
   const live = serialize(editor)
   if (baselineSerialized !== null && live === baselineSerialized) {
-    return cachedContent
+    return sourceMap?.diskBytes ?? cachedContent
   }
   if (sourceMap) {
     return spliceContent(sourceMap, live)
