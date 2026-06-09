@@ -43,6 +43,45 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'opens markdown with Human Markdown through the default editor association',
+    run: async () => {
+      const config = vscode.workspace.getConfiguration('workbench')
+      const originalAssociations = config.get<Record<string, string>>('editorAssociations')
+      const uri = await writeWorkspaceFile(
+        'default-association-human-markdown.md',
+        '# Default Association\n\nOpen me as Human Markdown.\n',
+      )
+      const before = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+
+      try {
+        await config.update(
+          'editorAssociations',
+          {
+            ...originalAssociations,
+            '*.md': VIEW_TYPE,
+          },
+          vscode.ConfigurationTarget.Workspace,
+        )
+
+        await vscode.commands.executeCommand('vscode.open', uri)
+        await waitForCustomEditor(uri, VIEW_TYPE)
+        await waitForWebviewMessage(uri, (message) => message.type === 'update')
+
+        const after = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+        const document = await vscode.workspace.openTextDocument(uri)
+        assert.equal(after, before)
+        assert.equal(document.getText(), before)
+        assert.equal(document.isDirty, false)
+      } finally {
+        await config.update(
+          'editorAssociations',
+          originalAssociations,
+          vscode.ConfigurationTarget.Workspace,
+        )
+      }
+    },
+  },
+  {
     name: 'keeps the backing TextDocument usable while the custom editor is open',
     run: async () => {
       const uri = await writeWorkspaceFile(
