@@ -12,10 +12,13 @@ each behavior before moving to the next item.
 
 ## Checklist
 
-- [ ] **Route conflict actions through the same sequencer as normal edits**
+- [x] **Route conflict actions through the same sequencer as normal edits**
   - `accept-external` and `keep-mine` currently apply edits directly in
     `src/editor-provider.ts`, while ordinary webview edits and saves go through
     `WebviewEditSequencer`.
+  - Status: fixed in the conflict sequencing branch; conflict resolution now
+    invalidates stale queued edits and runs through the sequencer after any
+    in-flight document mutation.
   - Target outcome: every document mutation from the webview is serialized
     through one ordered path, and conflict resolution invalidates older queued
     edits.

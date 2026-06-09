@@ -30,6 +30,11 @@ export class WebviewEditSequencer {
     return this.enqueue(() => this.callbacks.save(content, requestId))
   }
 
+  enqueueConflictResolution(task: () => Promise<void> | void) {
+    this.invalidatePendingEdits()
+    return this.enqueue(task)
+  }
+
   invalidatePendingEdits() {
     this.editGeneration += 1
   }
