@@ -75,4 +75,38 @@ describe('WebviewEditSequencer', () => {
 
     expect(onHistoryEditApplied).toHaveBeenCalledOnce()
   })
+
+  it('ignores queued edits after invalidation', async () => {
+    const applied: string[] = []
+    let finishFirstEdit!: () => void
+    let firstEditStarted!: () => void
+    const firstEditDidStart = new Promise<void>((resolve) => {
+      firstEditStarted = resolve
+    })
+    const firstEditCanFinish = new Promise<void>((resolve) => {
+      finishFirstEdit = resolve
+    })
+
+    const sequencer = new WebviewEditSequencer({
+      applyEdit: async (content) => {
+        applied.push(content)
+        if (content === 'in-flight') {
+          firstEditStarted()
+          await firstEditCanFinish
+        }
+        return true
+      },
+      save: async () => {},
+    })
+
+    const inFlight = sequencer.enqueueEdit('in-flight', 1)
+    await firstEditDidStart
+    const staleQueued = sequencer.enqueueEdit('stale-after-accept-external', 2)
+
+    sequencer.invalidatePendingEdits()
+    finishFirstEdit()
+    await Promise.all([inFlight, staleQueued])
+
+    expect(applied).toEqual(['in-flight'])
+  })
 })

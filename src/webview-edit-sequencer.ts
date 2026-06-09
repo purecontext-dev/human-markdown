@@ -8,13 +8,16 @@ export interface WebviewEditSequencerCallbacks {
 
 export class WebviewEditSequencer {
   private latestRevision = 0
+  private editGeneration = 0
   private queue: Promise<void> = Promise.resolve()
 
   constructor(private readonly callbacks: WebviewEditSequencerCallbacks) {}
 
   enqueueEdit(content: string, revision: number, origin: WebviewEditOrigin = 'edit') {
     this.latestRevision = Math.max(this.latestRevision, revision)
+    const generation = this.editGeneration
     return this.enqueue(async () => {
+      if (generation !== this.editGeneration) return
       if (revision < this.latestRevision) return
       const applied = await this.callbacks.applyEdit(content)
       if (applied && origin === 'history') {
@@ -25,6 +28,10 @@ export class WebviewEditSequencer {
 
   enqueueSave(content: string, requestId?: number) {
     return this.enqueue(() => this.callbacks.save(content, requestId))
+  }
+
+  invalidatePendingEdits() {
+    this.editGeneration += 1
   }
 
   private enqueue(task: () => Promise<void> | void) {

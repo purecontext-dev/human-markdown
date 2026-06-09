@@ -159,7 +159,8 @@ const conflictBar = new ConflictBar(
   },
   () => {
     vscode.postMessage({ type: 'keep-mine', content: currentContent })
-    setDirty(false)
+    conflictBar.hide()
+    saveController.scheduleAutoSave()
   },
 )
 

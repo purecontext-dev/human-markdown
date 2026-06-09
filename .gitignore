@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.vscode-test/
 *.vsix
 .forge/dev-state.json
 .mcp.json
