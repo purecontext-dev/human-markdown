@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.2 - 2026-06-09
+
+### Fixed
+- Saving from markdown/raw mode no longer shows a misleading "Save failed" message after normal edits.
+- Human Markdown now treats VS Code's text document as the single source of truth for save state, preventing save/close/reopen drift after undo and raw-mode edits.
+- The save error indicator no longer shifts the toolbar controls when it appears.
+
+### Improved
+- README guidance for Cursor users now calls out Cursor's built-in markdown toggle and points users to Human Markdown's own rich text/raw toggle.
+
 ## 0.5.1 - 2026-06-08
 
 ### Fixed
