@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { Editor, defaultValueCtx, editorViewCtx, rootCtx } from '@milkdown/core'
+import { defaultValueCtx, Editor, editorViewCtx, rootCtx } from '@milkdown/core'
 import { commonmark } from '@milkdown/preset-commonmark'
 import { TextSelection } from '@milkdown/prose/state'
 import { afterEach, describe, expect, it, vi } from 'vitest'

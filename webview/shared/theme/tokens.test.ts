@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { type ThemeTokens, applyTheme, darkTheme, githubTheme, lightTheme, themes } from './tokens'
+import { applyTheme, darkTheme, githubTheme, lightTheme, type ThemeTokens, themes } from './tokens'
 
 describe('theme tokens', () => {
   const requiredKeys: (keyof ThemeTokens)[] = [

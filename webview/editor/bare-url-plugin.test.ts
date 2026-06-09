@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import {
-  Editor,
   defaultValueCtx,
+  Editor,
   editorViewCtx,
   remarkStringifyOptionsCtx,
   rootCtx,

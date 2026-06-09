@@ -2,8 +2,8 @@ import { redo as cmRedo, undo as cmUndo } from '@codemirror/commands'
 import { Transaction } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import {
-  Editor,
   defaultValueCtx,
+  Editor,
   remarkCtx,
   remarkStringifyOptionsCtx,
   rootCtx,

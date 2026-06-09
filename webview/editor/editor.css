@@ -177,7 +177,9 @@ body[data-host="cursor"] #toolbar {
   font-family: var(--vscode-font-family, sans-serif);
   font-size: 11px;
   cursor: pointer;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
 }
 
 #mode-toggle-btn:hover {

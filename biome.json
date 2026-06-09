@@ -1,8 +1,6 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -22,6 +20,6 @@
     }
   },
   "files": {
-    "ignore": ["dist/", "node_modules/", ".vscode-test/", "*.vsix"]
+    "includes": ["**", "!dist", "!node_modules", "!.vscode-test", "!mock.html", "!*.vsix"]
   }
 }

@@ -2,8 +2,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  Editor,
   defaultValueCtx,
+  Editor,
   editorViewCtx,
   remarkCtx,
   remarkStringifyOptionsCtx,

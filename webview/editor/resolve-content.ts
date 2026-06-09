@@ -1,5 +1,5 @@
-import { editorViewCtx, serializerCtx } from '@milkdown/core'
 import type { Editor } from '@milkdown/core'
+import { editorViewCtx, serializerCtx } from '@milkdown/core'
 import type { SourceMap } from './source-splice'
 import { spliceContent } from './source-splice'
 

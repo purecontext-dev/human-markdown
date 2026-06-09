@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import {
-  Editor,
   defaultValueCtx,
+  Editor,
   editorViewCtx,
   inputRulesCtx,
   remarkStringifyOptionsCtx,
@@ -14,7 +14,7 @@ import { EditorState, TextSelection } from '@milkdown/prose/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { bareUrlParsePlugin, bareUrlStringifyPlugin } from './bare-url-plugin'
 import { keyboardNavPlugin } from './keyboard-nav'
-import { URL_INPUT_RULE_REGEX, linkInputRule } from './link-input-rule'
+import { linkInputRule, URL_INPUT_RULE_REGEX } from './link-input-rule'
 import { nonInclusiveLinkSchema } from './non-inclusive-link'
 
 const NBSP = String.fromCharCode(0xa0)
