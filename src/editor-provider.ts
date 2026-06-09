@@ -6,11 +6,20 @@ import { getConfiguredThemeName, resolveThemeTokens } from './theme-resolver'
 import { threeWayMerge } from './three-way-merge'
 import { WebviewEditSequencer } from './webview-edit-sequencer'
 
+interface TestSession {
+  uri: vscode.Uri
+  sendMessage: (msg: WebviewToExtensionMessage) => void
+  getMessages: () => ExtensionToWebviewMessage[]
+  getState: () => Record<string, unknown>
+  clearMessages: () => void
+}
+
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'humanMarkdown.preview'
 
   private readonly savedStates = new Map<string, { scrollTop: number; mode: 'preview' | 'raw' }>()
   private readonly webviews = new Set<vscode.Webview>()
+  private readonly testSessions = new Map<string, TestSession[]>()
   private activeWebview: vscode.Webview | null = null
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -85,7 +94,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       }
     })
 
-    return vscode.Disposable.from(
+    const disposables: vscode.Disposable[] = [
       registration,
       toggleCommand,
       findCommand,
@@ -95,7 +104,13 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       redoCommand,
       onConfigChange,
       onColorThemeChange,
-    )
+    ]
+
+    if (process.env.HUMAN_MARKDOWN_TEST_HOOKS === '1') {
+      disposables.push(...provider.registerTestHooks())
+    }
+
+    return vscode.Disposable.from(...disposables)
   }
 
   async resolveCustomTextEditor(
@@ -123,12 +138,33 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       else if (this.activeWebview === webview) this.activeWebview = null
     })
 
-    let suppressDepth = 0
+    const suppressedDocumentChanges: string[] = []
     let webviewIsDirty = false
     let isSaving = false
     let baseContent = document.getText()
     let lastAppliedFromWebview: string | null = null
     let protectWebviewContentUntil = 0
+    let onMessageReceived: (msg: WebviewToExtensionMessage) => void = () => {}
+    const sessionMessages: ExtensionToWebviewMessage[] = []
+    const documentKey = document.uri.toString()
+    const testSession: TestSession = {
+      uri: document.uri,
+      sendMessage: (msg) => onMessageReceived(msg),
+      getMessages: () => [...sessionMessages],
+      getState: () => ({
+        webviewIsDirty,
+        baseContent,
+        lastAppliedFromWebview,
+        suppressedDocumentChanges: [...suppressedDocumentChanges],
+      }),
+      clearMessages: () => {
+        sessionMessages.length = 0
+      },
+    }
+    this.addTestSession(documentKey, testSession)
+    const post = (message: ExtensionToWebviewMessage) => {
+      this.postSessionMessage(webview, sessionMessages, message)
+    }
 
     const tryMergeExternal = (
       externalContent: string,
@@ -138,10 +174,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       if (result.conflict) return false
       if (result.merged === document.getText()) {
         baseContent = result.merged
-        this.postMessage(webview, { type: 'merge-update', content: result.merged })
+        post({ type: 'merge-update', content: result.merged })
         return true
       }
-      suppressDepth++
+      suppressDocumentChange(result.merged)
       const edit = new vscode.WorkspaceEdit()
       const fullRange = new vscode.Range(
         document.positionAt(0),
@@ -151,11 +187,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.workspace.applyEdit(edit).then(
         () => {
           baseContent = result.merged
-          this.postMessage(webview, { type: 'merge-update', content: result.merged })
+          post({ type: 'merge-update', content: result.merged })
         },
         () => {
-          suppressDepth--
-          this.postMessage(webview, { type: 'external-change' })
+          unsuppressDocumentChange(result.merged)
+          post({ type: 'external-change' })
         },
       )
       return true
@@ -167,7 +203,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         return Promise.resolve(true)
       }
       lastAppliedFromWebview = content
-      suppressDepth++
+      suppressDocumentChange(content)
       const edit = new vscode.WorkspaceEdit()
       const fullRange = new vscode.Range(
         document.positionAt(0),
@@ -180,7 +216,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           return true
         },
         () => {
-          suppressDepth--
+          unsuppressDocumentChange(content)
           return false
         },
       )
@@ -189,7 +225,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const saveWebviewContent = async (content: string, requestId?: number) => {
       const reportSaveSuccess = (content: string) => {
         baseContent = content
-        this.postMessage(webview, { type: 'save-success', requestId })
+        post({ type: 'save-success', requestId })
       }
 
       const doSave = async () => {
@@ -202,16 +238,16 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           if (saved || !document.isDirty) {
             reportSaveSuccess(contentBeforeSave)
           } else {
-            this.postMessage(webview, { type: 'save-failed', requestId, reason: 'save' })
+            post({ type: 'save-failed', requestId, reason: 'save' })
           }
         } catch {
           isSaving = false
-          this.postMessage(webview, { type: 'save-failed', requestId, reason: 'save' })
+          post({ type: 'save-failed', requestId, reason: 'save' })
         }
       }
 
       if (content !== document.getText()) {
-        suppressDepth++
+        suppressDocumentChange(content)
         const edit = new vscode.WorkspaceEdit()
         const fullRange = new vscode.Range(
           document.positionAt(0),
@@ -222,8 +258,8 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         if (applied) {
           await doSave()
         } else {
-          suppressDepth--
-          this.postMessage(webview, { type: 'save-failed', requestId, reason: 'apply' })
+          unsuppressDocumentChange(content)
+          post({ type: 'save-failed', requestId, reason: 'apply' })
         }
       } else {
         await doSave()
@@ -238,20 +274,20 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       },
     })
 
-    const onMessage = webview.onDidReceiveMessage((msg: WebviewToExtensionMessage) => {
+    onMessageReceived = (msg: WebviewToExtensionMessage) => {
       switch (msg.type) {
         case 'ready': {
           baseContent = document.getText()
-          this.postMessage(webview, { type: 'update', content: document.getText() })
-          this.postMessage(webview, {
+          post({ type: 'update', content: document.getText() })
+          post({
             type: 'theme',
             tokens: resolveThemeTokens(getConfiguredThemeName()),
           })
-          this.postMessage(webview, {
+          post({
             type: 'set-mode',
             mode: defaultMode === 'raw' ? 'raw' : 'preview',
           })
-          this.postMessage(webview, {
+          post({
             type: 'auto-save',
             enabled: vscode.workspace
               .getConfiguration('humanMarkdown')
@@ -259,11 +295,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           })
           const saved = this.savedStates.get(document.uri.toString())
           if (saved) {
-            this.postMessage(webview, { type: 'restore-state', state: saved })
+            post({ type: 'restore-state', state: saved })
           }
           break
         }
         case 'edit': {
+          webviewIsDirty = true
           webviewEditSequencer.enqueueEdit(msg.content, msg.revision, msg.origin)
           break
         }
@@ -272,10 +309,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'accept-external': {
+          webviewEditSequencer.invalidatePendingEdits()
           vscode.workspace.fs.readFile(document.uri).then(
             (bytes) => {
               const diskContent = new TextDecoder().decode(bytes)
-              suppressDepth++
+              suppressDocumentChange(diskContent)
               const edit = new vscode.WorkspaceEdit()
               const fullRange = new vscode.Range(
                 document.positionAt(0),
@@ -286,24 +324,24 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
                 () => {
                   baseContent = diskContent
                   webviewIsDirty = false
-                  this.postMessage(webview, { type: 'update', content: diskContent })
+                  post({ type: 'update', content: diskContent })
                 },
                 () => {
-                  suppressDepth--
-                  this.postMessage(webview, { type: 'external-change' })
+                  unsuppressDocumentChange(diskContent)
+                  post({ type: 'external-change' })
                 },
               )
             },
             () => {
-              this.postMessage(webview, { type: 'external-change' })
+              post({ type: 'external-change' })
             },
           )
           break
         }
         case 'keep-mine': {
-          applyWebviewEdit(msg.content, () => {
-            webviewIsDirty = false
-          })
+          webviewEditSequencer.invalidatePendingEdits()
+          webviewIsDirty = true
+          applyWebviewEdit(msg.content)
           break
         }
         case 'save-state': {
@@ -329,7 +367,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             break
           }
           const webviewUri = webview.asWebviewUri(imageUri).toString()
-          this.postMessage(webview, {
+          post({
             type: 'image-uri-resolved',
             src: msg.src,
             webviewUri,
@@ -342,7 +380,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             .getConfiguration('humanMarkdown')
             .update('autoSave', target, vscode.ConfigurationTarget.Global)
             .then(undefined, () => {
-              this.postMessage(webview, { type: 'auto-save', enabled: !target })
+              post({ type: 'auto-save', enabled: !target })
             })
           break
         }
@@ -351,46 +389,63 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
       }
-    })
+    }
+
+    const onMessage = webview.onDidReceiveMessage(onMessageReceived)
 
     const onDocChange = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return
-      if (suppressDepth > 0) {
-        suppressDepth--
-        return
-      }
-      if (isSaving) return
       const newContent = document.getText()
+      if (consumeSuppressedDocumentChange(newContent)) return
+      if (isSaving) return
+      if (lastAppliedFromWebview !== null && newContent === lastAppliedFromWebview) return
       if (
         Date.now() < protectWebviewContentUntil &&
         lastAppliedFromWebview !== null &&
         newContent !== lastAppliedFromWebview
       ) {
-        this.postMessage(webview, { type: 'external-change' })
+        post({ type: 'external-change' })
         return
       }
       if (webviewIsDirty) {
         const webviewContent = lastAppliedFromWebview ?? baseContent
         if (!tryMergeExternal(newContent, webviewContent)) {
-          this.postMessage(webview, { type: 'external-change' })
+          post({ type: 'external-change' })
         }
       } else {
         baseContent = newContent
         lastAppliedFromWebview = null
-        this.postMessage(webview, { type: 'update', content: newContent })
+        post({ type: 'update', content: newContent })
       }
     })
+
+    function suppressDocumentChange(content: string) {
+      suppressedDocumentChanges.push(content)
+    }
+
+    function unsuppressDocumentChange(content: string) {
+      const index = suppressedDocumentChanges.indexOf(content)
+      if (index !== -1) suppressedDocumentChanges.splice(index, 1)
+    }
+
+    function consumeSuppressedDocumentChange(content: string): boolean {
+      const index = suppressedDocumentChanges.indexOf(content)
+      if (index === -1) return false
+      suppressedDocumentChanges.splice(index, 1)
+      return true
+    }
 
     const onDocSave = vscode.workspace.onDidSaveTextDocument((savedDocument) => {
       if (savedDocument.uri.toString() !== document.uri.toString()) return
       const savedContent = document.getText()
       baseContent = savedContent
       lastAppliedFromWebview = savedContent
-      this.postMessage(webview, { type: 'save-success' })
+      post({ type: 'save-success' })
     })
 
     webviewPanel.onDidDispose(() => {
       this.webviews.delete(webview)
+      this.removeTestSession(documentKey, testSession)
       onMessage.dispose()
       onDocChange.dispose()
       onDocSave.dispose()
@@ -415,6 +470,57 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
   private postMessage(webview: vscode.Webview, message: ExtensionToWebviewMessage) {
     webview.postMessage(message)
+  }
+
+  private postSessionMessage(
+    webview: vscode.Webview,
+    sessionMessages: ExtensionToWebviewMessage[],
+    message: ExtensionToWebviewMessage,
+  ) {
+    sessionMessages.push(message)
+    this.postMessage(webview, message)
+  }
+
+  private registerTestHooks(): vscode.Disposable[] {
+    return [
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.sendMessage',
+        (uriString: string, message: WebviewToExtensionMessage) => {
+          const session = this.getTestSession(uriString)
+          session?.sendMessage(message)
+        },
+      ),
+      vscode.commands.registerCommand('humanMarkdown.test.messages', (uriString: string) => {
+        return this.getTestSession(uriString)?.getMessages() ?? []
+      }),
+      vscode.commands.registerCommand('humanMarkdown.test.state', (uriString: string) => {
+        return this.getTestSession(uriString)?.getState() ?? {}
+      }),
+      vscode.commands.registerCommand('humanMarkdown.test.clearMessages', (uriString: string) => {
+        this.getTestSession(uriString)?.clearMessages()
+      }),
+    ]
+  }
+
+  private addTestSession(documentKey: string, session: TestSession) {
+    const sessions = this.testSessions.get(documentKey) ?? []
+    sessions.push(session)
+    this.testSessions.set(documentKey, sessions)
+  }
+
+  private removeTestSession(documentKey: string, session: TestSession) {
+    const sessions = this.testSessions.get(documentKey)
+    if (!sessions) return
+    const remaining = sessions.filter((s) => s !== session)
+    if (remaining.length === 0) {
+      this.testSessions.delete(documentKey)
+    } else {
+      this.testSessions.set(documentKey, remaining)
+    }
+  }
+
+  private getTestSession(uriString: string): TestSession | undefined {
+    return this.testSessions.get(uriString)?.at(-1)
   }
 
   private getHtmlForWebview(webview: vscode.Webview): string {
