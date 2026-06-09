@@ -172,7 +172,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
     "@types/jsdom": "^28.0.3",
-    "@types/node": "^25.6.2",
+    "@types/node": "^25.9.2",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^3.0.0",
     "@vscode/vsce": "^3.9.2",
