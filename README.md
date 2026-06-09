@@ -1,3 +1,5 @@
+> **Cursor users:** Cursor adds a "Preview | Markdown" toggle to the tab bar for `.md` files. That toggle switches you out of Human Markdown into Cursor's built-in viewer. Use Human Markdown's own toggle (toolbar button or `Cmd+Shift+V`) to switch between rich text and raw markdown.
+
 # Human Markdown
 
 A WYSIWYG markdown editor for VSCode. Open any `.md` file, read it rendered, edit it inline. Toggle to raw with one keystroke.
@@ -5,8 +7,6 @@ A WYSIWYG markdown editor for VSCode. Open any `.md` file, read it rendered, edi
 AI writes the markdown. Human Markdown makes it something you can actually read and work with.
 
 ![Frontmatter and prose rendering](demo/1-frontmatter.png)
-
-> **Cursor users:** Cursor adds a "Preview | Markdown" toggle to the tab bar for `.md` files. That toggle switches you out of Human Markdown into Cursor's built-in viewer. Use Human Markdown's own toggle (toolbar button or `Cmd+Shift+V`) to switch between rich text and raw markdown.
 
 ## Features
 
@@ -20,7 +20,7 @@ YAML frontmatter renders as a collapsible card with syntax highlighting. Click t
 
 ### Tables and Diagrams
 
-GFM tables render as styled grids. Mermaid diagrams render inline — flowcharts, sequence diagrams, entity relationships, and more. The Mermaid renderer lazy-loads only when your document contains a mermaid block.
+GFM tables render as styled grids. Mermaid diagrams render inline — flowcharts, sequence diagrams, entity relationships, and more. The Mermaid renderer lazy-loads only when your document contains a mermaid block. test
 
 ![Tables and Mermaid diagrams](demo/2-tables-mermaid.png)
 
@@ -74,11 +74,11 @@ Opens in under 200ms. Mode toggle under 100ms. Heavy renderers (Mermaid, KaTeX) 
 
 ### Commands
 
-| Command | Shortcut | Description |
-|---------|----------|-------------|
+| Command                              | Shortcut      | Description                     |
+| ------------------------------------ | ------------- | ------------------------------- |
 | Human Markdown: Toggle WYSIWYG / Raw | `Cmd+Shift+V` | Switch between rendered and raw |
-| Human Markdown: Find | `Cmd+F` | Search in the active mode |
-| Human Markdown: Select Theme | — | Pick a theme from the palette |
+| Human Markdown: Find                 | `Cmd+F`       | Search in the active mode       |
+| Human Markdown: Select Theme         | —             | Pick a theme from the palette   |
 
 ### Keyboard Shortcuts
 
@@ -86,39 +86,39 @@ The editor supports standard formatting shortcuts in WYSIWYG mode. A formatting 
 
 #### Inline Formatting
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd/Ctrl+B` | Bold |
-| `Cmd/Ctrl+I` | Italic |
-| `Cmd/Ctrl+E` | Inline code |
+| Shortcut         | Action        |
+| ---------------- | ------------- |
+| `Cmd/Ctrl+B`     | Bold          |
+| `Cmd/Ctrl+I`     | Italic        |
+| `Cmd/Ctrl+E`     | Inline code   |
 | `Cmd/Ctrl+Alt+X` | Strikethrough |
 
 #### Block Formatting
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd/Ctrl+Alt+1` – `6` | Heading 1–6 |
-| `Cmd/Ctrl+Alt+0` | Paragraph (clear heading) |
-| `Cmd/Ctrl+Alt+8` | Bullet list |
-| `Cmd/Ctrl+Alt+7` | Ordered list |
-| `Cmd/Ctrl+Shift+B` | Blockquote |
-| `Cmd/Ctrl+Alt+C` | Code block |
+| Shortcut               | Action                    |
+| ---------------------- | ------------------------- |
+| `Cmd/Ctrl+Alt+1` – `6` | Heading 1–6               |
+| `Cmd/Ctrl+Alt+0`       | Paragraph (clear heading) |
+| `Cmd/Ctrl+Alt+8`       | Bullet list               |
+| `Cmd/Ctrl+Alt+7`       | Ordered list              |
+| `Cmd/Ctrl+Shift+B`     | Blockquote                |
+| `Cmd/Ctrl+Alt+C`       | Code block                |
 
 #### Lists
 
-| Shortcut | Action |
-|----------|--------|
-| `Tab` | Indent list item |
-| `Shift+Tab` | Outdent list item |
-| `Enter` | New list item |
-| `Enter` (empty item) | Exit list |
+| Shortcut             | Action            |
+| -------------------- | ----------------- |
+| `Tab`                | Indent list item  |
+| `Shift+Tab`          | Outdent list item |
+| `Enter`              | New list item     |
+| `Enter` (empty item) | Exit list         |
 
 ### Settings
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `humanMarkdown.theme` | `auto` | Theme: auto, light, dark, github |
-| `humanMarkdown.defaultMode` | `wysiwyg` | Default mode when opening files |
+| Setting                     | Default   | Description                      |
+| --------------------------- | --------- | -------------------------------- |
+| `humanMarkdown.theme`       | `auto`    | Theme: auto, light, dark, github |
+| `humanMarkdown.defaultMode` | `wysiwyg` | Default mode when opening files  |
 
 ## Requirements
 

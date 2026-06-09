@@ -10,8 +10,8 @@ export type ExtensionToWebviewMessage =
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
-  | { type: 'save-success' }
-  | { type: 'save-failed' }
+  | { type: 'save-success'; requestId?: number }
+  | { type: 'save-failed'; requestId?: number; reason?: 'apply' | 'save' }
   | { type: 'auto-save'; enabled: boolean }
   | { type: 'undo' }
   | { type: 'redo' }
@@ -25,7 +25,7 @@ export type WebviewToExtensionMessage =
   | { type: 'save-state'; state: WebviewState }
   | { type: 'open-link'; href: string }
   | { type: 'resolve-image-uri'; src: string }
-  | { type: 'save'; content: string }
+  | { type: 'save'; content: string; requestId?: number }
   | { type: 'auto-save-changed'; enabled: boolean }
 
 export interface WebviewState {
