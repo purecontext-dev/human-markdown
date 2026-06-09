@@ -1,7 +1,7 @@
 export type WebviewEditOrigin = 'edit' | 'history'
 
 export interface WebviewEditSequencerCallbacks {
-  applyEdit: (content: string) => Promise<boolean>
+  applyEdit: (content: string, source?: unknown) => Promise<boolean>
   save: (content: string, requestId?: number) => Promise<void>
   onHistoryEditApplied?: () => void
 }
@@ -13,13 +13,18 @@ export class WebviewEditSequencer {
 
   constructor(private readonly callbacks: WebviewEditSequencerCallbacks) {}
 
-  enqueueEdit(content: string, revision: number, origin: WebviewEditOrigin = 'edit') {
+  enqueueEdit(
+    content: string,
+    revision: number,
+    origin: WebviewEditOrigin = 'edit',
+    source?: unknown,
+  ) {
     this.latestRevision = Math.max(this.latestRevision, revision)
     const generation = this.editGeneration
     return this.enqueue(async () => {
       if (generation !== this.editGeneration) return
       if (revision < this.latestRevision) return
-      const applied = await this.callbacks.applyEdit(content)
+      const applied = await this.callbacks.applyEdit(content, source)
       if (applied && origin === 'history') {
         this.callbacks.onHistoryEditApplied?.()
       }

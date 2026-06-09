@@ -48,9 +48,12 @@ each behavior before moving to the next item.
   - Likely files: `src/editor-provider.ts`, `src/webview-edit-sequencer.ts`,
     provider sync tests.
 
-- [ ] **Share sync state across multiple webviews for the same document**
+- [x] **Share sync state across multiple webviews for the same document**
   - Each `resolveCustomTextEditor` call owns independent `baseContent`,
     `webviewIsDirty`, and `lastAppliedFromWebview` state.
+  - Status: fixed in the shared sync session branch; `MarkdownEditorProvider`
+    now keeps one `DocumentSyncSession` per document URI and each webview panel
+    only owns UI/message state.
   - Target outcome: multiple editor groups for the same markdown file coordinate
     through a per-document sync controller, while each panel only owns UI state.
   - Likely files: `src/editor-provider.ts`, possible new sync controller module,
