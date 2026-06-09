@@ -186,7 +186,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       )
     }
 
-    const saveWebviewContent = async (content: string) => {
+    const saveWebviewContent = async (content: string, requestId?: number) => {
+      const reportSaveSuccess = (content: string) => {
+        baseContent = content
+        this.postMessage(webview, { type: 'save-success', requestId })
+      }
+
       const doSave = async () => {
         isSaving = true
         const contentBeforeSave = document.getText()
@@ -195,14 +200,13 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           const saved = await document.save()
           isSaving = false
           if (saved || !document.isDirty) {
-            baseContent = contentBeforeSave
-            this.postMessage(webview, { type: 'save-success' })
+            reportSaveSuccess(contentBeforeSave)
           } else {
-            this.postMessage(webview, { type: 'save-failed' })
+            this.postMessage(webview, { type: 'save-failed', requestId, reason: 'save' })
           }
         } catch {
           isSaving = false
-          this.postMessage(webview, { type: 'save-failed' })
+          this.postMessage(webview, { type: 'save-failed', requestId, reason: 'save' })
         }
       }
 
@@ -219,7 +223,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           await doSave()
         } else {
           suppressDepth--
-          this.postMessage(webview, { type: 'save-failed' })
+          this.postMessage(webview, { type: 'save-failed', requestId, reason: 'apply' })
         }
       } else {
         await doSave()
@@ -343,7 +347,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'save': {
-          webviewEditSequencer.enqueueSave(msg.content)
+          webviewEditSequencer.enqueueSave(msg.content, msg.requestId)
           break
         }
       }
@@ -377,50 +381,19 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       }
     })
 
-    const docDir = vscode.Uri.joinPath(document.uri, '..')
-    const docBasename = path.basename(document.uri.fsPath)
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(docDir, docBasename),
-    )
-    const onFileChange = fileWatcher.onDidChange(async () => {
-      if (isSaving) return
-      try {
-        const diskBytes = await vscode.workspace.fs.readFile(document.uri)
-        const diskContent = new TextDecoder().decode(diskBytes)
-        if (diskContent === lastAppliedFromWebview) return
-        if (webviewIsDirty) {
-          if (!tryMergeExternal(diskContent)) {
-            this.postMessage(webview, { type: 'external-change' })
-          }
-        } else {
-          baseContent = diskContent
-          suppressDepth++
-          const edit = new vscode.WorkspaceEdit()
-          const fullRange = new vscode.Range(
-            document.positionAt(0),
-            document.positionAt(document.getText().length),
-          )
-          edit.replace(document.uri, fullRange, diskContent)
-          vscode.workspace.applyEdit(edit).then(
-            () => {
-              this.postMessage(webview, { type: 'update', content: diskContent })
-            },
-            () => {
-              suppressDepth--
-            },
-          )
-        }
-      } catch {
-        this.postMessage(webview, { type: 'external-change' })
-      }
+    const onDocSave = vscode.workspace.onDidSaveTextDocument((savedDocument) => {
+      if (savedDocument.uri.toString() !== document.uri.toString()) return
+      const savedContent = document.getText()
+      baseContent = savedContent
+      lastAppliedFromWebview = savedContent
+      this.postMessage(webview, { type: 'save-success' })
     })
 
     webviewPanel.onDidDispose(() => {
       this.webviews.delete(webview)
       onMessage.dispose()
       onDocChange.dispose()
-      onFileChange.dispose()
-      fileWatcher.dispose()
+      onDocSave.dispose()
     })
   }
 

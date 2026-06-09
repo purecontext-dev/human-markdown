@@ -2,7 +2,7 @@ export type WebviewEditOrigin = 'edit' | 'history'
 
 export interface WebviewEditSequencerCallbacks {
   applyEdit: (content: string) => Promise<boolean>
-  save: (content: string) => Promise<void>
+  save: (content: string, requestId?: number) => Promise<void>
   onHistoryEditApplied?: () => void
 }
 
@@ -23,8 +23,8 @@ export class WebviewEditSequencer {
     })
   }
 
-  enqueueSave(content: string) {
-    return this.enqueue(() => this.callbacks.save(content))
+  enqueueSave(content: string, requestId?: number) {
+    return this.enqueue(() => this.callbacks.save(content, requestId))
   }
 
   private enqueue(task: () => Promise<void> | void) {

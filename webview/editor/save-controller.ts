@@ -1,11 +1,10 @@
 export interface SaveControllerCallbacks {
   getCurrentContent: () => string
   setDirty: (dirty: boolean) => void
-  postMessage: (msg: { type: string; content?: string }) => void
+  postMessage: (msg: { type: string; content?: string; requestId?: number }) => void
   hideConflict: () => void
   showError: () => void
   isConflictActive: () => boolean
-  showConflict: () => void
 }
 
 const AUTO_SAVE_DELAY = 2000
@@ -17,6 +16,8 @@ export class SaveController {
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null
   private autoSaveFailures = 0
   private autoSaveBlockedUntil = 0
+  private nextSaveRequestId = 1
+  private pendingSaveRequestId: number | null = null
 
   constructor(private cb: SaveControllerCallbacks) {}
 
@@ -24,25 +25,35 @@ export class SaveController {
     this.clearAutoSaveTimer()
     this.autoSaveFailures = 0
     this.pendingSaveContent = this.cb.getCurrentContent()
-    this.cb.postMessage({ type: 'save', content: this.pendingSaveContent })
+    this.pendingSaveRequestId = this.nextSaveRequestId++
+    this.cb.postMessage({
+      type: 'save',
+      content: this.pendingSaveContent,
+      requestId: this.pendingSaveRequestId,
+    })
   }
 
-  handleSuccess() {
+  handleSuccess(requestId?: number) {
+    if (!this.isCurrentSaveResponse(requestId)) return
     const savedContent = this.pendingSaveContent
-    if (savedContent !== null && this.cb.getCurrentContent() === savedContent) {
+    if (savedContent === null || this.cb.getCurrentContent() === savedContent) {
       this.cb.setDirty(false)
       this.cb.hideConflict()
     }
     this.pendingSaveContent = null
+    this.pendingSaveRequestId = null
     this.autoSaveFailures = 0
     this.rescheduleIfDirty(savedContent)
   }
 
-  handleFailure() {
+  handleFailure(requestId?: number, reason: 'apply' | 'save' = 'save') {
+    if (!this.isCurrentSaveResponse(requestId)) return
     const savedContent = this.pendingSaveContent
     this.pendingSaveContent = null
-    this.cb.showConflict()
-    this.cb.showError()
+    this.pendingSaveRequestId = null
+    if (reason === 'apply') {
+      this.cb.showError()
+    }
     this.autoSaveFailures++
     if (this.autoSaveFailures < MAX_AUTO_SAVE_RETRIES) {
       this.rescheduleIfDirty(savedContent)
@@ -96,5 +107,9 @@ export class SaveController {
       clearTimeout(this.autoSaveTimer)
       this.autoSaveTimer = null
     }
+  }
+
+  private isCurrentSaveResponse(requestId?: number): boolean {
+    return requestId === undefined || requestId === this.pendingSaveRequestId
   }
 }

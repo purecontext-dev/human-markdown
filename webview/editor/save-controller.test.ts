@@ -7,7 +7,6 @@ describe('SaveController', () => {
   let conflictActive: boolean
   let postMessage: ReturnType<typeof vi.fn>
   let hideConflict: ReturnType<typeof vi.fn>
-  let showConflict: ReturnType<typeof vi.fn>
   let showError: ReturnType<typeof vi.fn>
   let ctrl: SaveController
 
@@ -17,9 +16,6 @@ describe('SaveController', () => {
     conflictActive = false
     postMessage = vi.fn()
     hideConflict = vi.fn()
-    showConflict = vi.fn(() => {
-      conflictActive = true
-    })
     showError = vi.fn()
     ctrl = new SaveController({
       getCurrentContent: () => content,
@@ -28,7 +24,6 @@ describe('SaveController', () => {
       },
       postMessage,
       hideConflict,
-      showConflict,
       showError,
       isConflictActive: () => conflictActive,
     })
@@ -37,7 +32,7 @@ describe('SaveController', () => {
   it('initiateSave snapshots content and posts save message', () => {
     ctrl.initiateSave()
     expect(ctrl.pendingSaveContent).toBe('hello')
-    expect(postMessage).toHaveBeenCalledWith({ type: 'save', content: 'hello' })
+    expect(postMessage).toHaveBeenCalledWith({ type: 'save', content: 'hello', requestId: 1 })
   })
 
   it('handleSuccess clears dirty when content unchanged since save', () => {
@@ -58,19 +53,41 @@ describe('SaveController', () => {
     expect(ctrl.pendingSaveContent).toBeNull()
   })
 
-  it('handleSuccess is a no-op without a pending save', () => {
+  it('handleSuccess clears dirty without a pending save for native save notifications', () => {
     ctrl.handleSuccess()
-    expect(dirty).toBe(true)
-    expect(hideConflict).not.toHaveBeenCalled()
+    expect(dirty).toBe(false)
+    expect(hideConflict).toHaveBeenCalledOnce()
   })
 
-  it('handleFailure shows error and clears pending state', () => {
+  it('handleFailure clears pending state without showing an error for host save failures', () => {
     ctrl.initiateSave()
-    ctrl.handleFailure()
-    expect(showConflict).toHaveBeenCalledOnce()
+    ctrl.handleFailure(1)
+    expect(showError).not.toHaveBeenCalled()
+    expect(ctrl.pendingSaveContent).toBeNull()
+    expect(dirty).toBe(true)
+  })
+
+  it('handleFailure shows error for webview content flush failures', () => {
+    ctrl.initiateSave()
+    ctrl.handleFailure(1, 'apply')
     expect(showError).toHaveBeenCalledOnce()
     expect(ctrl.pendingSaveContent).toBeNull()
     expect(dirty).toBe(true)
+  })
+
+  it('ignores stale save failures from earlier requests', () => {
+    ctrl.initiateSave()
+    content = 'v2'
+    ctrl.initiateSave()
+
+    ctrl.handleFailure(1)
+
+    expect(showError).not.toHaveBeenCalled()
+    expect(ctrl.pendingSaveContent).toBe('v2')
+    expect(dirty).toBe(true)
+
+    ctrl.handleSuccess(2)
+    expect(dirty).toBe(false)
   })
 
   it('second save overwrites pending content snapshot', () => {
@@ -96,7 +113,9 @@ describe('SaveController', () => {
       ctrl.scheduleAutoSave()
       expect(postMessage).not.toHaveBeenCalled()
       vi.advanceTimersByTime(2000)
-      expect(postMessage).toHaveBeenCalledWith({ type: 'save', content: 'hello' })
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'save', content: 'hello' }),
+      )
     })
 
     it('scheduleAutoSave is a no-op when disabled', () => {
@@ -130,7 +149,9 @@ describe('SaveController', () => {
       vi.advanceTimersByTime(1000)
       expect(postMessage).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1000)
-      expect(postMessage).toHaveBeenCalledWith({ type: 'save', content: 'hello' })
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'save', content: 'hello' }),
+      )
     })
 
     it('timer callback bails if conflict becomes active before firing', () => {
@@ -154,22 +175,23 @@ describe('SaveController', () => {
       ctrl.handleFailure()
       content = 'changed'
       ctrl.handleFailure()
-      // Save failure activates conflict state, so auto-save should not retry.
       vi.advanceTimersByTime(2000)
-      expect(postMessage).not.toHaveBeenCalled()
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'save', content: 'changed' }),
+      )
     })
 
-    it('handleFailure does not reschedule while conflict is active', () => {
+    it('handleFailure reschedules when content is dirty', () => {
       ctrl.setAutoSave(true)
       ctrl.scheduleAutoSave()
       vi.advanceTimersByTime(2000)
       content = 'changed'
       ctrl.handleFailure()
       vi.advanceTimersByTime(2000)
-      expect(postMessage).toHaveBeenCalledTimes(1)
+      expect(postMessage).toHaveBeenCalledTimes(2)
     })
 
-    it('handleFailure stops retrying after conflict activation', () => {
+    it('handleFailure stops retrying after max attempts', () => {
       ctrl.setAutoSave(true)
       content = 'dirty'
       for (let i = 0; i < 3; i++) {
@@ -178,7 +200,7 @@ describe('SaveController', () => {
         ctrl.handleFailure()
       }
       vi.advanceTimersByTime(2000)
-      expect(postMessage).toHaveBeenCalledTimes(1)
+      expect(postMessage).toHaveBeenCalledTimes(3)
     })
 
     it('setAutoSave(false) clears pending timer', () => {

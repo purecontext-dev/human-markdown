@@ -81,8 +81,8 @@ type ExtensionMessage =
   | { type: 'set-mode'; mode: 'preview' | 'raw' }
   | { type: 'show-find' }
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
-  | { type: 'save-success' }
-  | { type: 'save-failed' }
+  | { type: 'save-success'; requestId?: number }
+  | { type: 'save-failed'; requestId?: number; reason?: 'apply' | 'save' }
   | { type: 'auto-save'; enabled: boolean }
   | { type: 'undo' }
   | { type: 'redo' }
@@ -535,7 +535,6 @@ const saveController = new SaveController({
   setDirty,
   postMessage: (msg) => vscode.postMessage(msg),
   hideConflict: () => conflictBar.hide(),
-  showConflict: () => conflictBar.show(),
   showError: showSaveError,
   isConflictActive: () => conflictBar.isVisible,
 })
@@ -595,10 +594,10 @@ window.addEventListener('message', (event) => {
       break
     }
     case 'save-success':
-      saveController.handleSuccess()
+      saveController.handleSuccess(msg.requestId)
       break
     case 'save-failed':
-      saveController.handleFailure()
+      saveController.handleFailure(msg.requestId, msg.reason)
       break
     case 'auto-save':
       autosaveCheckbox.checked = msg.enabled
