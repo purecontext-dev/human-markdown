@@ -222,6 +222,39 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       )
     }
 
+    const acceptExternalContent = async () => {
+      try {
+        const bytes = await vscode.workspace.fs.readFile(document.uri)
+        const diskContent = new TextDecoder().decode(bytes)
+        if (diskContent === document.getText()) {
+          baseContent = diskContent
+          lastAppliedFromWebview = null
+          webviewIsDirty = false
+          post({ type: 'update', content: diskContent })
+          return
+        }
+        suppressDocumentChange(diskContent)
+        const edit = new vscode.WorkspaceEdit()
+        const fullRange = new vscode.Range(
+          document.positionAt(0),
+          document.positionAt(document.getText().length),
+        )
+        edit.replace(document.uri, fullRange, diskContent)
+        const applied = await Promise.resolve(vscode.workspace.applyEdit(edit))
+        if (applied) {
+          baseContent = diskContent
+          lastAppliedFromWebview = null
+          webviewIsDirty = false
+          post({ type: 'update', content: diskContent })
+        } else {
+          unsuppressDocumentChange(diskContent)
+          post({ type: 'external-change' })
+        }
+      } catch {
+        post({ type: 'external-change' })
+      }
+    }
+
     const saveWebviewContent = async (content: string, requestId?: number) => {
       const reportSaveSuccess = (content: string) => {
         baseContent = content
@@ -309,39 +342,14 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'accept-external': {
-          webviewEditSequencer.invalidatePendingEdits()
-          vscode.workspace.fs.readFile(document.uri).then(
-            (bytes) => {
-              const diskContent = new TextDecoder().decode(bytes)
-              suppressDocumentChange(diskContent)
-              const edit = new vscode.WorkspaceEdit()
-              const fullRange = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(document.getText().length),
-              )
-              edit.replace(document.uri, fullRange, diskContent)
-              vscode.workspace.applyEdit(edit).then(
-                () => {
-                  baseContent = diskContent
-                  webviewIsDirty = false
-                  post({ type: 'update', content: diskContent })
-                },
-                () => {
-                  unsuppressDocumentChange(diskContent)
-                  post({ type: 'external-change' })
-                },
-              )
-            },
-            () => {
-              post({ type: 'external-change' })
-            },
-          )
+          webviewEditSequencer.enqueueConflictResolution(acceptExternalContent)
           break
         }
         case 'keep-mine': {
-          webviewEditSequencer.invalidatePendingEdits()
-          webviewIsDirty = true
-          applyWebviewEdit(msg.content)
+          webviewEditSequencer.enqueueConflictResolution(async () => {
+            webviewIsDirty = true
+            await applyWebviewEdit(msg.content)
+          })
           break
         }
         case 'save-state': {
