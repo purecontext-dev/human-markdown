@@ -102,6 +102,31 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'toggle command reaches the active custom editor',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'toggle-command-active-editor.md',
+        '# Toggle Command\n\nRoute command messages to the active panel.\n',
+      )
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+
+      await waitForWebviewMessage(uri, (message) => message.type === 'toggle-mode', 1)
+      await settle()
+      const inactiveMessages = await getWebviewMessages(uri, 0)
+      assert.equal(
+        inactiveMessages.some((message) => message.type === 'toggle-mode'),
+        false,
+      )
+    },
+  },
+  {
     name: 'webview edit updates the backing TextDocument',
     run: async () => {
       const uri = await writeWorkspaceFile(
