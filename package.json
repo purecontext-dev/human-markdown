@@ -175,8 +175,8 @@
     "@types/node": "^25.6.2",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^3.0.0",
-    "@vscode/vsce": "^3.0.0",
-    "esbuild": "^0.24.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.25.12",
     "husky": "^9.0.0",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.5",
@@ -212,6 +212,7 @@
   "pnpm": {
     "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"],
     "overrides": {
+      "qs@>=6.11.1 <=6.15.1": ">=6.15.2",
       "tmp@<0.2.6": ">=0.2.6"
     }
   },
