@@ -20,6 +20,27 @@ describe('WebviewEditSequencer', () => {
     expect(applied).toEqual(['restored-word-state'])
   })
 
+  it('tracks latest edit revision independently for each source', async () => {
+    const applied: string[] = []
+    const firstSource = {}
+    const secondSource = {}
+    const sequencer = new WebviewEditSequencer({
+      applyEdit: async (content) => {
+        applied.push(content)
+        return true
+      },
+      save: async () => {},
+    })
+
+    const firstEdit = sequencer.enqueueEdit('first-source-revision-1', 1, 'edit', firstSource)
+    const secondEdit = sequencer.enqueueEdit('first-source-revision-2', 2, 'edit', firstSource)
+    const thirdEdit = sequencer.enqueueEdit('second-source-revision-1', 1, 'edit', secondSource)
+
+    await Promise.all([firstEdit, secondEdit, thirdEdit])
+
+    expect(applied).toEqual(['first-source-revision-2', 'second-source-revision-1'])
+  })
+
   it('saves only after all pending webview edits have applied', async () => {
     let documentText = 'initial'
     const events: string[] = []

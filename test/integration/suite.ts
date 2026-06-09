@@ -382,6 +382,39 @@ const tests: IntegrationTest[] = [
       )
     },
   },
+  {
+    name: 'same file editor groups keep independent edit revision streams',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'same-file-independent-webview-revisions.md',
+        '# Shared Revisions\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const firstEdit = '# Shared Revisions\n\nFirst editor group edit.\n'
+      const secondEdit = '# Shared Revisions\n\nFirst editor group second edit.\n'
+      const peerEdit = '# Shared Revisions\n\nSecond editor group edit.\n'
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+
+      await sendWebviewMessage(uri, { type: 'edit', content: firstEdit, revision: 1 }, 0)
+      await waitForDocumentText(document, firstEdit)
+      await sendWebviewMessage(uri, { type: 'edit', content: secondEdit, revision: 2 }, 0)
+      await waitForDocumentText(document, secondEdit)
+
+      await sendWebviewMessage(uri, { type: 'edit', content: peerEdit, revision: 1 }, 1)
+
+      await waitForDocumentText(document, peerEdit)
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'update' && message.content === peerEdit,
+        0,
+      )
+    },
+  },
 ]
 
 export async function run(): Promise<void> {

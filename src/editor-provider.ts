@@ -21,6 +21,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
   private readonly savedStates = new Map<string, { scrollTop: number; mode: 'preview' | 'raw' }>()
   private readonly webviews = new Set<vscode.Webview>()
+  private readonly documentSyncSessions = new Map<string, DocumentSyncSession>()
   private readonly testSessions = new Map<string, TestSession[]>()
   private readonly testMessageSinks = new WeakMap<vscode.Webview, ExtensionToWebviewMessage[]>()
   private activeWebview: vscode.Webview | null = null
@@ -141,15 +142,8 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       else if (this.activeWebview === webview) this.activeWebview = null
     })
 
-    const suppressedDocumentChanges: string[] = []
-    let webviewIsDirty = false
-    let isSaving = false
-    let baseContent = document.getText()
-    let lastAppliedFromWebview: string | null = null
-    let protectWebviewContentUntil = 0
-    let holdNextWebviewEdit = false
-    let heldWebviewEditStarted = false
-    let releaseHeldWebviewEdit: (() => void) | null = null
+    const syncSession = this.getOrCreateDocumentSyncSession(document)
+    syncSession.addWebview(webview)
     let onMessageReceived: (msg: WebviewToExtensionMessage) => void = () => {}
     const sessionMessages: ExtensionToWebviewMessage[] = []
     const documentKey = document.uri.toString()
@@ -157,22 +151,15 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       uri: document.uri,
       sendMessage: (msg) => onMessageReceived(msg),
       getMessages: () => [...sessionMessages],
-      getState: () => ({
-        webviewIsDirty,
-        baseContent,
-        lastAppliedFromWebview,
-        heldWebviewEditStarted,
-        suppressedDocumentChanges: [...suppressedDocumentChanges],
-      }),
+      getState: () => syncSession.getTestState(),
       clearMessages: () => {
         sessionMessages.length = 0
       },
       holdNextWebviewEdit: () => {
-        holdNextWebviewEdit = true
-        heldWebviewEditStarted = false
+        syncSession.holdNextWebviewEdit()
       },
       releaseHeldWebviewEdit: () => {
-        releaseHeldWebviewEdit?.()
+        syncSession.releaseHeldWebviewEdit()
       },
     }
     this.addTestSession(documentKey, testSession)
@@ -181,166 +168,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       this.postSessionMessage(webview, message)
     }
 
-    const tryMergeExternal = (
-      externalContent: string,
-      webviewContent = document.getText(),
-    ): boolean => {
-      const result = threeWayMerge(baseContent, webviewContent, externalContent)
-      if (result.conflict) return false
-      if (result.merged === document.getText()) {
-        baseContent = result.merged
-        post({ type: 'merge-update', content: result.merged })
-        return true
-      }
-      suppressDocumentChange(result.merged)
-      const edit = new vscode.WorkspaceEdit()
-      const fullRange = new vscode.Range(
-        document.positionAt(0),
-        document.positionAt(document.getText().length),
-      )
-      edit.replace(document.uri, fullRange, result.merged)
-      vscode.workspace.applyEdit(edit).then(
-        () => {
-          baseContent = result.merged
-          post({ type: 'merge-update', content: result.merged })
-        },
-        () => {
-          unsuppressDocumentChange(result.merged)
-          post({ type: 'external-change' })
-        },
-      )
-      return true
-    }
-
-    const applyWebviewEdit = (content: string, onSuccess?: () => void): Promise<boolean> => {
-      const waitForHeldEdit = async () => {
-        if (!holdNextWebviewEdit) return
-        holdNextWebviewEdit = false
-        heldWebviewEditStarted = true
-        await new Promise<void>((resolve) => {
-          releaseHeldWebviewEdit = resolve
-        })
-        releaseHeldWebviewEdit = null
-        heldWebviewEditStarted = false
-      }
-
-      return waitForHeldEdit().then(() => applyWebviewEditNow(content, onSuccess))
-    }
-
-    const applyWebviewEditNow = (content: string, onSuccess?: () => void): Promise<boolean> => {
-      if (content === document.getText()) {
-        onSuccess?.()
-        return Promise.resolve(true)
-      }
-      lastAppliedFromWebview = content
-      suppressDocumentChange(content)
-      const edit = new vscode.WorkspaceEdit()
-      const fullRange = new vscode.Range(
-        document.positionAt(0),
-        document.positionAt(document.getText().length),
-      )
-      edit.replace(document.uri, fullRange, content)
-      return Promise.resolve(vscode.workspace.applyEdit(edit)).then(
-        () => {
-          onSuccess?.()
-          return true
-        },
-        () => {
-          unsuppressDocumentChange(content)
-          return false
-        },
-      )
-    }
-
-    const acceptExternalContent = async () => {
-      try {
-        const bytes = await vscode.workspace.fs.readFile(document.uri)
-        const diskContent = new TextDecoder().decode(bytes)
-        if (diskContent === document.getText()) {
-          baseContent = diskContent
-          lastAppliedFromWebview = null
-          webviewIsDirty = false
-          post({ type: 'update', content: diskContent })
-          return
-        }
-        suppressDocumentChange(diskContent)
-        const edit = new vscode.WorkspaceEdit()
-        const fullRange = new vscode.Range(
-          document.positionAt(0),
-          document.positionAt(document.getText().length),
-        )
-        edit.replace(document.uri, fullRange, diskContent)
-        const applied = await Promise.resolve(vscode.workspace.applyEdit(edit))
-        if (applied) {
-          baseContent = diskContent
-          lastAppliedFromWebview = null
-          webviewIsDirty = false
-          post({ type: 'update', content: diskContent })
-        } else {
-          unsuppressDocumentChange(diskContent)
-          post({ type: 'external-change' })
-        }
-      } catch {
-        post({ type: 'external-change' })
-      }
-    }
-
-    const saveWebviewContent = async (content: string, requestId?: number) => {
-      const reportSaveSuccess = (content: string) => {
-        baseContent = content
-        post({ type: 'save-success', requestId })
-      }
-
-      const doSave = async () => {
-        isSaving = true
-        const contentBeforeSave = document.getText()
-        lastAppliedFromWebview = contentBeforeSave
-        try {
-          const saved = await document.save()
-          isSaving = false
-          if (saved || !document.isDirty) {
-            reportSaveSuccess(contentBeforeSave)
-          } else {
-            post({ type: 'save-failed', requestId, reason: 'save' })
-          }
-        } catch {
-          isSaving = false
-          post({ type: 'save-failed', requestId, reason: 'save' })
-        }
-      }
-
-      if (content !== document.getText()) {
-        suppressDocumentChange(content)
-        const edit = new vscode.WorkspaceEdit()
-        const fullRange = new vscode.Range(
-          document.positionAt(0),
-          document.positionAt(document.getText().length),
-        )
-        edit.replace(document.uri, fullRange, content)
-        const applied = await Promise.resolve(vscode.workspace.applyEdit(edit))
-        if (applied) {
-          await doSave()
-        } else {
-          unsuppressDocumentChange(content)
-          post({ type: 'save-failed', requestId, reason: 'apply' })
-        }
-      } else {
-        await doSave()
-      }
-    }
-
-    const webviewEditSequencer = new WebviewEditSequencer({
-      applyEdit: applyWebviewEdit,
-      save: saveWebviewContent,
-      onHistoryEditApplied: () => {
-        protectWebviewContentUntil = Date.now() + 750
-      },
-    })
-
     onMessageReceived = (msg: WebviewToExtensionMessage) => {
       switch (msg.type) {
         case 'ready': {
-          baseContent = document.getText()
+          syncSession.syncBaseFromDocumentIfClean()
           post({ type: 'update', content: document.getText() })
           post({
             type: 'theme',
@@ -363,23 +194,19 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'edit': {
-          webviewIsDirty = true
-          webviewEditSequencer.enqueueEdit(msg.content, msg.revision, msg.origin)
+          syncSession.enqueueEdit(msg.content, msg.revision, msg.origin, webview)
           break
         }
         case 'dirty-state': {
-          webviewIsDirty = msg.isDirty
+          syncSession.setDirty(msg.isDirty)
           break
         }
         case 'accept-external': {
-          webviewEditSequencer.enqueueConflictResolution(acceptExternalContent)
+          syncSession.enqueueAcceptExternal()
           break
         }
         case 'keep-mine': {
-          webviewEditSequencer.enqueueConflictResolution(async () => {
-            webviewIsDirty = true
-            await applyWebviewEdit(msg.content)
-          })
+          syncSession.enqueueKeepMine(msg.content, webview)
           break
         }
         case 'save-state': {
@@ -423,7 +250,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'save': {
-          webviewEditSequencer.enqueueSave(msg.content, msg.requestId)
+          syncSession.enqueueSave(msg.content, msg.requestId)
           break
         }
       }
@@ -431,66 +258,32 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     const onMessage = webview.onDidReceiveMessage(onMessageReceived)
 
-    const onDocChange = vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document.uri.toString() !== document.uri.toString()) return
-      const newContent = document.getText()
-      if (consumeSuppressedDocumentChange(newContent)) return
-      if (isSaving) return
-      if (lastAppliedFromWebview !== null && newContent === lastAppliedFromWebview) return
-      if (
-        Date.now() < protectWebviewContentUntil &&
-        lastAppliedFromWebview !== null &&
-        newContent !== lastAppliedFromWebview
-      ) {
-        post({ type: 'external-change' })
-        return
-      }
-      if (webviewIsDirty) {
-        const externalContent = newContent
-        webviewEditSequencer.enqueueExternalChange(() => {
-          const webviewContent = lastAppliedFromWebview ?? baseContent
-          if (!tryMergeExternal(externalContent, webviewContent)) {
-            post({ type: 'external-change' })
-          }
-        })
-      } else {
-        baseContent = newContent
-        lastAppliedFromWebview = null
-        post({ type: 'update', content: newContent })
-      }
-    })
-
-    function suppressDocumentChange(content: string) {
-      suppressedDocumentChanges.push(content)
-    }
-
-    function unsuppressDocumentChange(content: string) {
-      const index = suppressedDocumentChanges.indexOf(content)
-      if (index !== -1) suppressedDocumentChanges.splice(index, 1)
-    }
-
-    function consumeSuppressedDocumentChange(content: string): boolean {
-      const index = suppressedDocumentChanges.indexOf(content)
-      if (index === -1) return false
-      suppressedDocumentChanges.splice(index, 1)
-      return true
-    }
-
-    const onDocSave = vscode.workspace.onDidSaveTextDocument((savedDocument) => {
-      if (savedDocument.uri.toString() !== document.uri.toString()) return
-      const savedContent = document.getText()
-      baseContent = savedContent
-      lastAppliedFromWebview = savedContent
-      post({ type: 'save-success' })
-    })
-
     webviewPanel.onDidDispose(() => {
       this.webviews.delete(webview)
+      syncSession.removeWebview(webview)
+      this.disposeDocumentSyncSessionIfIdle(documentKey)
       this.removeTestSession(documentKey, testSession)
       onMessage.dispose()
-      onDocChange.dispose()
-      onDocSave.dispose()
     })
+  }
+
+  private getOrCreateDocumentSyncSession(document: vscode.TextDocument): DocumentSyncSession {
+    const documentKey = document.uri.toString()
+    const existing = this.documentSyncSessions.get(documentKey)
+    if (existing) return existing
+
+    const session = new DocumentSyncSession(document, (webview, message) => {
+      this.postSessionMessage(webview, message)
+    })
+    this.documentSyncSessions.set(documentKey, session)
+    return session
+  }
+
+  private disposeDocumentSyncSessionIfIdle(documentKey: string) {
+    const session = this.documentSyncSessions.get(documentKey)
+    if (!session || session.hasWebviews) return
+    session.dispose()
+    this.documentSyncSessions.delete(documentKey)
   }
 
   private broadcastTheme() {
@@ -651,6 +444,317 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
 </html>`
+  }
+}
+
+class DocumentSyncSession {
+  private readonly webviews = new Set<vscode.Webview>()
+  private readonly suppressedDocumentChanges: string[] = []
+  private readonly disposables: vscode.Disposable[]
+  private readonly webviewEditSequencer: WebviewEditSequencer
+  private webviewIsDirty = false
+  private isSaving = false
+  private baseContent: string
+  private lastAppliedFromWebview: string | null = null
+  private protectWebviewContentUntil = 0
+  private holdNextEdit = false
+  private heldWebviewEditStarted = false
+  private releaseHeldEdit: (() => void) | null = null
+
+  constructor(
+    private readonly document: vscode.TextDocument,
+    private readonly post: (webview: vscode.Webview, message: ExtensionToWebviewMessage) => void,
+  ) {
+    this.baseContent = document.getText()
+    this.webviewEditSequencer = new WebviewEditSequencer({
+      applyEdit: (content, source) => this.applyWebviewEdit(content, this.asKnownWebview(source)),
+      save: (content, requestId) => this.saveWebviewContent(content, requestId),
+      onHistoryEditApplied: () => {
+        this.protectWebviewContentUntil = Date.now() + 750
+      },
+    })
+    this.disposables = [
+      vscode.workspace.onDidChangeTextDocument((e) => this.handleDocumentChange(e)),
+      vscode.workspace.onDidSaveTextDocument((savedDocument) =>
+        this.handleDocumentSave(savedDocument),
+      ),
+    ]
+  }
+
+  get hasWebviews(): boolean {
+    return this.webviews.size > 0
+  }
+
+  addWebview(webview: vscode.Webview) {
+    this.webviews.add(webview)
+  }
+
+  removeWebview(webview: vscode.Webview) {
+    this.webviews.delete(webview)
+  }
+
+  dispose() {
+    for (const disposable of this.disposables) {
+      disposable.dispose()
+    }
+  }
+
+  syncBaseFromDocumentIfClean() {
+    if (this.webviewIsDirty) return
+    this.baseContent = this.document.getText()
+    this.lastAppliedFromWebview = null
+  }
+
+  setDirty(isDirty: boolean) {
+    this.webviewIsDirty = isDirty
+  }
+
+  enqueueEdit(
+    content: string,
+    revision: number,
+    origin: 'history' | 'edit' | undefined,
+    source: vscode.Webview,
+  ) {
+    this.webviewIsDirty = true
+    this.webviewEditSequencer.enqueueEdit(content, revision, origin, source)
+  }
+
+  enqueueSave(content: string, requestId?: number) {
+    this.webviewEditSequencer.enqueueSave(content, requestId)
+  }
+
+  enqueueAcceptExternal() {
+    this.webviewEditSequencer.enqueueConflictResolution(() => this.acceptExternalContent())
+  }
+
+  enqueueKeepMine(content: string, source: vscode.Webview) {
+    this.webviewEditSequencer.enqueueConflictResolution(async () => {
+      this.webviewIsDirty = true
+      await this.applyWebviewEdit(content, source)
+    })
+  }
+
+  holdNextWebviewEdit() {
+    this.holdNextEdit = true
+    this.heldWebviewEditStarted = false
+  }
+
+  releaseHeldWebviewEdit() {
+    this.releaseHeldEdit?.()
+  }
+
+  getTestState(): Record<string, unknown> {
+    return {
+      webviewIsDirty: this.webviewIsDirty,
+      baseContent: this.baseContent,
+      lastAppliedFromWebview: this.lastAppliedFromWebview,
+      heldWebviewEditStarted: this.heldWebviewEditStarted,
+      suppressedDocumentChanges: [...this.suppressedDocumentChanges],
+    }
+  }
+
+  private handleDocumentChange(e: vscode.TextDocumentChangeEvent) {
+    if (e.document.uri.toString() !== this.document.uri.toString()) return
+    const newContent = this.document.getText()
+    if (this.consumeSuppressedDocumentChange(newContent)) return
+    if (this.isSaving) return
+    if (this.lastAppliedFromWebview !== null && newContent === this.lastAppliedFromWebview) return
+    if (
+      Date.now() < this.protectWebviewContentUntil &&
+      this.lastAppliedFromWebview !== null &&
+      newContent !== this.lastAppliedFromWebview
+    ) {
+      this.broadcast({ type: 'external-change' })
+      return
+    }
+    if (this.webviewIsDirty) {
+      const externalContent = newContent
+      this.webviewEditSequencer.enqueueExternalChange(() => {
+        const webviewContent = this.lastAppliedFromWebview ?? this.baseContent
+        if (!this.tryMergeExternal(externalContent, webviewContent)) {
+          this.broadcast({ type: 'external-change' })
+        }
+      })
+    } else {
+      this.baseContent = newContent
+      this.lastAppliedFromWebview = null
+      this.broadcast({ type: 'update', content: newContent })
+    }
+  }
+
+  private handleDocumentSave(savedDocument: vscode.TextDocument) {
+    if (savedDocument.uri.toString() !== this.document.uri.toString()) return
+    const savedContent = this.document.getText()
+    this.baseContent = savedContent
+    this.lastAppliedFromWebview = savedContent
+    this.broadcast({ type: 'save-success' })
+  }
+
+  private tryMergeExternal(externalContent: string, webviewContent = this.document.getText()) {
+    const result = threeWayMerge(this.baseContent, webviewContent, externalContent)
+    if (result.conflict) return false
+    if (result.merged === this.document.getText()) {
+      this.baseContent = result.merged
+      this.broadcast({ type: 'merge-update', content: result.merged })
+      return true
+    }
+    this.suppressDocumentChange(result.merged)
+    const edit = new vscode.WorkspaceEdit()
+    edit.replace(this.document.uri, this.fullDocumentRange(), result.merged)
+    vscode.workspace.applyEdit(edit).then(
+      () => {
+        this.baseContent = result.merged
+        this.broadcast({ type: 'merge-update', content: result.merged })
+      },
+      () => {
+        this.unsuppressDocumentChange(result.merged)
+        this.broadcast({ type: 'external-change' })
+      },
+    )
+    return true
+  }
+
+  private async applyWebviewEdit(content: string, source?: vscode.Webview): Promise<boolean> {
+    await this.waitForHeldEdit()
+    if (content === this.document.getText()) {
+      this.broadcastExcept(source, { type: 'update', content })
+      return true
+    }
+    this.lastAppliedFromWebview = content
+    this.suppressDocumentChange(content)
+    const edit = new vscode.WorkspaceEdit()
+    edit.replace(this.document.uri, this.fullDocumentRange(), content)
+    return Promise.resolve(vscode.workspace.applyEdit(edit)).then(
+      () => {
+        this.broadcastExcept(source, { type: 'update', content })
+        return true
+      },
+      () => {
+        this.unsuppressDocumentChange(content)
+        return false
+      },
+    )
+  }
+
+  private async acceptExternalContent() {
+    try {
+      const bytes = await vscode.workspace.fs.readFile(this.document.uri)
+      const diskContent = new TextDecoder().decode(bytes)
+      if (diskContent === this.document.getText()) {
+        this.baseContent = diskContent
+        this.lastAppliedFromWebview = null
+        this.webviewIsDirty = false
+        this.broadcast({ type: 'update', content: diskContent })
+        return
+      }
+      this.suppressDocumentChange(diskContent)
+      const edit = new vscode.WorkspaceEdit()
+      edit.replace(this.document.uri, this.fullDocumentRange(), diskContent)
+      const applied = await Promise.resolve(vscode.workspace.applyEdit(edit))
+      if (applied) {
+        this.baseContent = diskContent
+        this.lastAppliedFromWebview = null
+        this.webviewIsDirty = false
+        this.broadcast({ type: 'update', content: diskContent })
+      } else {
+        this.unsuppressDocumentChange(diskContent)
+        this.broadcast({ type: 'external-change' })
+      }
+    } catch {
+      this.broadcast({ type: 'external-change' })
+    }
+  }
+
+  private async saveWebviewContent(content: string, requestId?: number) {
+    const reportSaveSuccess = (savedContent: string) => {
+      this.baseContent = savedContent
+      this.broadcast({ type: 'save-success', requestId })
+    }
+
+    const doSave = async () => {
+      this.isSaving = true
+      const contentBeforeSave = this.document.getText()
+      this.lastAppliedFromWebview = contentBeforeSave
+      try {
+        const saved = await this.document.save()
+        this.isSaving = false
+        if (saved || !this.document.isDirty) {
+          reportSaveSuccess(contentBeforeSave)
+        } else {
+          this.broadcast({ type: 'save-failed', requestId, reason: 'save' })
+        }
+      } catch {
+        this.isSaving = false
+        this.broadcast({ type: 'save-failed', requestId, reason: 'save' })
+      }
+    }
+
+    if (content !== this.document.getText()) {
+      this.suppressDocumentChange(content)
+      const edit = new vscode.WorkspaceEdit()
+      edit.replace(this.document.uri, this.fullDocumentRange(), content)
+      const applied = await Promise.resolve(vscode.workspace.applyEdit(edit))
+      if (applied) {
+        await doSave()
+      } else {
+        this.unsuppressDocumentChange(content)
+        this.broadcast({ type: 'save-failed', requestId, reason: 'apply' })
+      }
+    } else {
+      await doSave()
+    }
+  }
+
+  private async waitForHeldEdit() {
+    if (!this.holdNextEdit) return
+    this.holdNextEdit = false
+    this.heldWebviewEditStarted = true
+    await new Promise<void>((resolve) => {
+      this.releaseHeldEdit = resolve
+    })
+    this.releaseHeldEdit = null
+    this.heldWebviewEditStarted = false
+  }
+
+  private suppressDocumentChange(content: string) {
+    this.suppressedDocumentChanges.push(content)
+  }
+
+  private unsuppressDocumentChange(content: string) {
+    const index = this.suppressedDocumentChanges.indexOf(content)
+    if (index !== -1) this.suppressedDocumentChanges.splice(index, 1)
+  }
+
+  private consumeSuppressedDocumentChange(content: string) {
+    const index = this.suppressedDocumentChanges.indexOf(content)
+    if (index === -1) return false
+    this.suppressedDocumentChanges.splice(index, 1)
+    return true
+  }
+
+  private fullDocumentRange() {
+    return new vscode.Range(
+      this.document.positionAt(0),
+      this.document.positionAt(this.document.getText().length),
+    )
+  }
+
+  private broadcast(message: ExtensionToWebviewMessage) {
+    for (const webview of this.webviews) {
+      this.post(webview, message)
+    }
+  }
+
+  private asKnownWebview(source: unknown): vscode.Webview | undefined {
+    return this.webviews.has(source as vscode.Webview) ? (source as vscode.Webview) : undefined
+  }
+
+  private broadcastExcept(source: vscode.Webview | undefined, message: ExtensionToWebviewMessage) {
+    for (const webview of this.webviews) {
+      if (webview !== source) {
+        this.post(webview, message)
+      }
+    }
   }
 }
 

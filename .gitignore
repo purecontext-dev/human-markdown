@@ -3,6 +3,7 @@ dist/
 .vscode-test/
 *.vsix
 .forge/dev-state.json
+.forge/session-context.md
 .mcp.json
 
 # Crucible QA (ephemeral per-operator state)
