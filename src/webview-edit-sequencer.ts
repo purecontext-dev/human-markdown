@@ -35,6 +35,10 @@ export class WebviewEditSequencer {
     return this.enqueue(task)
   }
 
+  enqueueExternalChange(task: () => Promise<void> | void) {
+    return this.enqueue(task)
+  }
+
   invalidatePendingEdits() {
     this.editGeneration += 1
   }

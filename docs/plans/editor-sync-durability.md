@@ -36,12 +36,13 @@ each behavior before moving to the next item.
   - Likely files: `src/editor-provider.ts`, `webview/editor/index.ts`,
     `webview/editor/conflict-bar.ts`, `webview/editor/save-controller.ts`.
 
-- [ ] **Prevent external merges from using stale webview snapshots**
+- [x] **Prevent external merges from using stale webview snapshots**
   - External merge handling uses `lastAppliedFromWebview ?? baseContent`, which
     can lag behind a newer queued edit from the webview.
-  - Status: partially fixed in the current test-hardening branch. The provider
-    now ignores self-echo document changes equal to `lastAppliedFromWebview` so
-    the merge base is not advanced to local dirty content.
+  - Status: fixed in the queued external merge branch. The provider now queues
+    dirty external merge handling behind pending webview edits, so merge
+    decisions see the latest applied local content before reconciling the
+    external change.
   - Target outcome: external merge decisions see the latest queued webview
     content, or wait behind queued edits before merging.
   - Likely files: `src/editor-provider.ts`, `src/webview-edit-sequencer.ts`,

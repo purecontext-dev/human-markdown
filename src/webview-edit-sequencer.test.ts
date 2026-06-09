@@ -145,4 +145,40 @@ describe('WebviewEditSequencer', () => {
 
     expect(events).toEqual(['apply:in-flight', 'resolve-conflict'])
   })
+
+  it('runs external changes after pending webview edits', async () => {
+    const events: string[] = []
+    let finishFirstEdit!: () => void
+    let firstEditStarted!: () => void
+    const firstEditDidStart = new Promise<void>((resolve) => {
+      firstEditStarted = resolve
+    })
+    const firstEditCanFinish = new Promise<void>((resolve) => {
+      finishFirstEdit = resolve
+    })
+
+    const sequencer = new WebviewEditSequencer({
+      applyEdit: async (content) => {
+        events.push(`apply:${content}`)
+        if (content === 'in-flight') {
+          firstEditStarted()
+          await firstEditCanFinish
+        }
+        return true
+      },
+      save: async () => {},
+    })
+
+    const inFlight = sequencer.enqueueEdit('in-flight', 1)
+    await firstEditDidStart
+    const queuedEdit = sequencer.enqueueEdit('latest-local', 2)
+    const externalChange = sequencer.enqueueExternalChange(() => {
+      events.push('external-change')
+    })
+
+    finishFirstEdit()
+    await Promise.all([inFlight, queuedEdit, externalChange])
+
+    expect(events).toEqual(['apply:in-flight', 'apply:latest-local', 'external-change'])
+  })
 })
