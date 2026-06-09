@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
 import {
-  type ThemeName,
-  type ThemeTokens,
   darkTheme,
   githubTheme,
   lightTheme,
+  type ThemeName,
+  type ThemeTokens,
 } from '../webview/shared/theme/tokens'
 
 export function resolveThemeTokens(themeName: ThemeName): ThemeTokens {
