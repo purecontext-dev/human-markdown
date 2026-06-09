@@ -22,6 +22,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   private readonly savedStates = new Map<string, { scrollTop: number; mode: 'preview' | 'raw' }>()
   private readonly webviews = new Set<vscode.Webview>()
   private readonly testSessions = new Map<string, TestSession[]>()
+  private readonly testMessageSinks = new WeakMap<vscode.Webview, ExtensionToWebviewMessage[]>()
   private activeWebview: vscode.Webview | null = null
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -175,8 +176,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       },
     }
     this.addTestSession(documentKey, testSession)
+    this.testMessageSinks.set(webview, sessionMessages)
     const post = (message: ExtensionToWebviewMessage) => {
-      this.postSessionMessage(webview, sessionMessages, message)
+      this.postSessionMessage(webview, message)
     }
 
     const tryMergeExternal = (
@@ -508,15 +510,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   private postMessage(webview: vscode.Webview, message: ExtensionToWebviewMessage) {
+    this.testMessageSinks.get(webview)?.push(message)
     webview.postMessage(message)
   }
 
-  private postSessionMessage(
-    webview: vscode.Webview,
-    sessionMessages: ExtensionToWebviewMessage[],
-    message: ExtensionToWebviewMessage,
-  ) {
-    sessionMessages.push(message)
+  private postSessionMessage(webview: vscode.Webview, message: ExtensionToWebviewMessage) {
     this.postMessage(webview, message)
   }
 
