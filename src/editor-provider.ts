@@ -12,6 +12,8 @@ interface TestSession {
   getMessages: () => ExtensionToWebviewMessage[]
   getState: () => Record<string, unknown>
   clearMessages: () => void
+  holdNextWebviewEdit: () => void
+  releaseHeldWebviewEdit: () => void
 }
 
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
@@ -144,6 +146,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     let baseContent = document.getText()
     let lastAppliedFromWebview: string | null = null
     let protectWebviewContentUntil = 0
+    let holdNextWebviewEdit = false
+    let heldWebviewEditStarted = false
+    let releaseHeldWebviewEdit: (() => void) | null = null
     let onMessageReceived: (msg: WebviewToExtensionMessage) => void = () => {}
     const sessionMessages: ExtensionToWebviewMessage[] = []
     const documentKey = document.uri.toString()
@@ -155,10 +160,18 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         webviewIsDirty,
         baseContent,
         lastAppliedFromWebview,
+        heldWebviewEditStarted,
         suppressedDocumentChanges: [...suppressedDocumentChanges],
       }),
       clearMessages: () => {
         sessionMessages.length = 0
+      },
+      holdNextWebviewEdit: () => {
+        holdNextWebviewEdit = true
+        heldWebviewEditStarted = false
+      },
+      releaseHeldWebviewEdit: () => {
+        releaseHeldWebviewEdit?.()
       },
     }
     this.addTestSession(documentKey, testSession)
@@ -198,6 +211,21 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
 
     const applyWebviewEdit = (content: string, onSuccess?: () => void): Promise<boolean> => {
+      const waitForHeldEdit = async () => {
+        if (!holdNextWebviewEdit) return
+        holdNextWebviewEdit = false
+        heldWebviewEditStarted = true
+        await new Promise<void>((resolve) => {
+          releaseHeldWebviewEdit = resolve
+        })
+        releaseHeldWebviewEdit = null
+        heldWebviewEditStarted = false
+      }
+
+      return waitForHeldEdit().then(() => applyWebviewEditNow(content, onSuccess))
+    }
+
+    const applyWebviewEditNow = (content: string, onSuccess?: () => void): Promise<boolean> => {
       if (content === document.getText()) {
         onSuccess?.()
         return Promise.resolve(true)
@@ -416,10 +444,13 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         return
       }
       if (webviewIsDirty) {
-        const webviewContent = lastAppliedFromWebview ?? baseContent
-        if (!tryMergeExternal(newContent, webviewContent)) {
-          post({ type: 'external-change' })
-        }
+        const externalContent = newContent
+        webviewEditSequencer.enqueueExternalChange(() => {
+          const webviewContent = lastAppliedFromWebview ?? baseContent
+          if (!tryMergeExternal(externalContent, webviewContent)) {
+            post({ type: 'external-change' })
+          }
+        })
       } else {
         baseContent = newContent
         lastAppliedFromWebview = null
@@ -514,6 +545,18 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         'humanMarkdown.test.clearMessages',
         (uriString: string, sessionIndex?: number) => {
           this.getTestSession(uriString, sessionIndex)?.clearMessages()
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.holdNextWebviewEdit',
+        (uriString: string, sessionIndex?: number) => {
+          this.getTestSession(uriString, sessionIndex)?.holdNextWebviewEdit()
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.releaseHeldWebviewEdit',
+        (uriString: string, sessionIndex?: number) => {
+          this.getTestSession(uriString, sessionIndex)?.releaseHeldWebviewEdit()
         },
       ),
       vscode.commands.registerCommand('humanMarkdown.test.sessionCount', (uriString: string) => {

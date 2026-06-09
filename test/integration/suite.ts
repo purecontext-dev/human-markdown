@@ -131,6 +131,37 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'external merge waits for queued webview edits before merging',
+    run: async () => {
+      const uri = await writeWorkspaceFile('queued-webview-edit-external-merge.md', 'A\nB\nC\n')
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await holdNextWebviewEdit(uri)
+      await sendWebviewMessage(uri, {
+        type: 'edit',
+        content: 'A old local\nB\nC\n',
+        revision: 1,
+      })
+      await waitForProviderState(uri, (state) => state.heldWebviewEditStarted === true)
+      await sendWebviewMessage(uri, {
+        type: 'edit',
+        content: 'A latest local\nB\nC\n',
+        revision: 2,
+      })
+
+      await replaceDocument(document, 'A\nB\nC external\n')
+      await releaseHeldWebviewEdit(uri)
+
+      const merged = 'A latest local\nB\nC external\n'
+      await waitForDocumentText(document, merged)
+      await waitForWebviewMessage(uri, (message) => {
+        return message.type === 'merge-update' && message.content === merged
+      })
+    },
+  },
+  {
     name: 'dirty webview plus overlapping external change surfaces conflict',
     run: async () => {
       const uri = await writeWorkspaceFile('overlapping-external-conflict.md', 'A\nB\nC\n')
@@ -289,6 +320,22 @@ async function getProviderState(
 async function clearWebviewMessages(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
   await vscode.commands.executeCommand(
     'humanMarkdown.test.clearMessages',
+    uri.toString(),
+    sessionIndex,
+  )
+}
+
+async function holdNextWebviewEdit(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.holdNextWebviewEdit',
+    uri.toString(),
+    sessionIndex,
+  )
+}
+
+async function releaseHeldWebviewEdit(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.releaseHeldWebviewEdit',
     uri.toString(),
     sessionIndex,
   )
