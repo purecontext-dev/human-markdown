@@ -485,19 +485,31 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     return [
       vscode.commands.registerCommand(
         'humanMarkdown.test.sendMessage',
-        (uriString: string, message: WebviewToExtensionMessage) => {
-          const session = this.getTestSession(uriString)
+        (uriString: string, message: WebviewToExtensionMessage, sessionIndex?: number) => {
+          const session = this.getTestSession(uriString, sessionIndex)
           session?.sendMessage(message)
         },
       ),
-      vscode.commands.registerCommand('humanMarkdown.test.messages', (uriString: string) => {
-        return this.getTestSession(uriString)?.getMessages() ?? []
-      }),
-      vscode.commands.registerCommand('humanMarkdown.test.state', (uriString: string) => {
-        return this.getTestSession(uriString)?.getState() ?? {}
-      }),
-      vscode.commands.registerCommand('humanMarkdown.test.clearMessages', (uriString: string) => {
-        this.getTestSession(uriString)?.clearMessages()
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.messages',
+        (uriString: string, sessionIndex?: number) => {
+          return this.getTestSession(uriString, sessionIndex)?.getMessages() ?? []
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.state',
+        (uriString: string, sessionIndex?: number) => {
+          return this.getTestSession(uriString, sessionIndex)?.getState() ?? {}
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.clearMessages',
+        (uriString: string, sessionIndex?: number) => {
+          this.getTestSession(uriString, sessionIndex)?.clearMessages()
+        },
+      ),
+      vscode.commands.registerCommand('humanMarkdown.test.sessionCount', (uriString: string) => {
+        return this.testSessions.get(uriString)?.length ?? 0
       }),
     ]
   }
@@ -519,8 +531,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
-  private getTestSession(uriString: string): TestSession | undefined {
-    return this.testSessions.get(uriString)?.at(-1)
+  private getTestSession(uriString: string, sessionIndex?: number): TestSession | undefined {
+    const sessions = this.testSessions.get(uriString)
+    if (!sessions) return undefined
+    if (sessionIndex === undefined) return sessions.at(-1)
+    return sessions[sessionIndex]
   }
 
   private getHtmlForWebview(webview: vscode.Webview): string {

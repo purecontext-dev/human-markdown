@@ -33,7 +33,9 @@ These tests target the current highest-risk findings from
 - [x] Queued edit cannot apply after accept external
   - Covered at the sequencer/provider level; add a full Electron interleaving
     test if we later add controllable provider delays.
-- [ ] Same file open in two editor groups sees shared updates
+- [x] Same file open in two editor groups sees shared updates
+  - Covered for the simple clean-panel propagation case. Dirty competing-panel
+    behavior remains tracked in Batch 4 and the durability checklist.
 
 Implementation note: `@vscode/test-electron` can launch VS Code and inspect the
 extension host, but it cannot directly drive sandboxed webview DOM by itself.
