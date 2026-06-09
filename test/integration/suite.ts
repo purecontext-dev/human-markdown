@@ -183,6 +183,40 @@ const tests: IntegrationTest[] = [
       assert.equal(document.isDirty, true)
     },
   },
+  {
+    name: 'same file open in two editor groups sees shared updates',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'same-file-two-editor-groups.md',
+        '# Shared\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const edited = '# Shared\n\nEdited from the first editor group.\n'
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+
+      await sendWebviewMessage(
+        uri,
+        {
+          type: 'edit',
+          content: edited,
+          revision: 1,
+        },
+        0,
+      )
+
+      await waitForDocumentText(document, edited)
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'update' && message.content === edited,
+        1,
+      )
+    },
+  },
 ]
 
 export async function run(): Promise<void> {
@@ -217,24 +251,60 @@ async function writeWorkspaceFile(name: string, content: string): Promise<vscode
   return uri
 }
 
-async function sendWebviewMessage(uri: vscode.Uri, message: unknown): Promise<void> {
-  await vscode.commands.executeCommand('humanMarkdown.test.sendMessage', uri.toString(), message)
+async function sendWebviewMessage(
+  uri: vscode.Uri,
+  message: unknown,
+  sessionIndex?: number,
+): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.sendMessage',
+    uri.toString(),
+    message,
+    sessionIndex,
+  )
 }
 
-async function getWebviewMessages(uri: vscode.Uri): Promise<Array<Record<string, unknown>>> {
-  return await vscode.commands.executeCommand('humanMarkdown.test.messages', uri.toString())
+async function getWebviewMessages(
+  uri: vscode.Uri,
+  sessionIndex?: number,
+): Promise<Array<Record<string, unknown>>> {
+  return await vscode.commands.executeCommand(
+    'humanMarkdown.test.messages',
+    uri.toString(),
+    sessionIndex,
+  )
 }
 
-async function getProviderState(uri: vscode.Uri): Promise<Record<string, unknown>> {
-  return await vscode.commands.executeCommand('humanMarkdown.test.state', uri.toString())
+async function getProviderState(
+  uri: vscode.Uri,
+  sessionIndex?: number,
+): Promise<Record<string, unknown>> {
+  return await vscode.commands.executeCommand(
+    'humanMarkdown.test.state',
+    uri.toString(),
+    sessionIndex,
+  )
 }
 
-async function clearWebviewMessages(uri: vscode.Uri): Promise<void> {
-  await vscode.commands.executeCommand('humanMarkdown.test.clearMessages', uri.toString())
+async function clearWebviewMessages(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.clearMessages',
+    uri.toString(),
+    sessionIndex,
+  )
 }
 
-async function openHumanMarkdown(uri: vscode.Uri): Promise<void> {
-  await vscode.commands.executeCommand('vscode.openWith', uri, VIEW_TYPE)
+async function getSessionCount(uri: vscode.Uri): Promise<number> {
+  return await vscode.commands.executeCommand('humanMarkdown.test.sessionCount', uri.toString())
+}
+
+async function openHumanMarkdown(uri: vscode.Uri, viewColumn?: vscode.ViewColumn): Promise<void> {
+  await vscode.commands.executeCommand(
+    'vscode.openWith',
+    uri,
+    VIEW_TYPE,
+    viewColumn === undefined ? undefined : { viewColumn },
+  )
   await waitForCustomEditor(uri, VIEW_TYPE)
   await waitForWebviewMessage(uri, (message) => message.type === 'update')
 }
@@ -242,9 +312,10 @@ async function openHumanMarkdown(uri: vscode.Uri): Promise<void> {
 async function waitForWebviewMessage(
   uri: vscode.Uri,
   predicate: (message: Record<string, unknown>) => boolean,
+  sessionIndex?: number,
 ): Promise<void> {
   await waitFor(async () => {
-    const messages = await getWebviewMessages(uri)
+    const messages = await getWebviewMessages(uri, sessionIndex)
     return messages.some(predicate)
   }, `Expected matching webview message for ${uri.toString()}`)
 }
@@ -268,11 +339,18 @@ async function createConflict(
 async function waitForProviderState(
   uri: vscode.Uri,
   predicate: (state: Record<string, unknown>) => boolean,
+  sessionIndex?: number,
 ): Promise<void> {
   await waitFor(async () => {
-    const state = await getProviderState(uri)
+    const state = await getProviderState(uri, sessionIndex)
     return predicate(state)
   }, `Expected matching provider state for ${uri.toString()}`)
+}
+
+async function waitForSessionCount(uri: vscode.Uri, expected: number): Promise<void> {
+  await waitFor(async () => {
+    return (await getSessionCount(uri)) === expected
+  }, `Expected ${expected} webview sessions for ${uri.toString()}`)
 }
 
 async function replaceDocument(document: vscode.TextDocument, content: string): Promise<void> {
