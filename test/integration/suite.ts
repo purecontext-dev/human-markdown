@@ -104,26 +104,51 @@ const tests: IntegrationTest[] = [
   {
     name: 'toggle command reaches the active custom editor',
     run: async () => {
-      const uri = await writeWorkspaceFile(
+      await assertCommandRoutesToActiveEditor(
         'toggle-command-active-editor.md',
-        '# Toggle Command\n\nRoute command messages to the active panel.\n',
+        'humanMarkdown.toggle',
+        'toggle-mode',
       )
-
-      await openHumanMarkdown(uri, vscode.ViewColumn.One)
-      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
-      await waitForSessionCount(uri, 2)
-      await clearWebviewMessages(uri, 0)
-      await clearWebviewMessages(uri, 1)
-
-      await vscode.commands.executeCommand('humanMarkdown.toggle')
-
-      await waitForWebviewMessage(uri, (message) => message.type === 'toggle-mode', 1)
-      await settle()
-      const inactiveMessages = await getWebviewMessages(uri, 0)
-      assert.equal(
-        inactiveMessages.some((message) => message.type === 'toggle-mode'),
-        false,
+    },
+  },
+  {
+    name: 'find command reaches the active custom editor',
+    run: async () => {
+      await assertCommandRoutesToActiveEditor(
+        'find-command-active-editor.md',
+        'humanMarkdown.find',
+        'show-find',
       )
+    },
+  },
+  {
+    name: 'theme configuration broadcasts to open webviews',
+    run: async () => {
+      const firstUri = await writeWorkspaceFile(
+        'theme-broadcast-one.md',
+        '# Theme One\n\nFirst open editor.\n',
+      )
+      const secondUri = await writeWorkspaceFile(
+        'theme-broadcast-two.md',
+        '# Theme Two\n\nSecond open editor.\n',
+      )
+      const config = vscode.workspace.getConfiguration('humanMarkdown')
+      const originalTheme = config.get<string>('theme')
+      const targetTheme = originalTheme === 'github' ? 'light' : 'github'
+
+      await openHumanMarkdown(firstUri, vscode.ViewColumn.One)
+      await openHumanMarkdown(secondUri, vscode.ViewColumn.Beside)
+      await clearWebviewMessages(firstUri)
+      await clearWebviewMessages(secondUri)
+
+      try {
+        await config.update('theme', targetTheme, vscode.ConfigurationTarget.Workspace)
+
+        await waitForWebviewMessage(firstUri, (message) => message.type === 'theme')
+        await waitForWebviewMessage(secondUri, (message) => message.type === 'theme')
+      } finally {
+        await config.update('theme', originalTheme, vscode.ConfigurationTarget.Workspace)
+      }
     },
   },
   {
@@ -168,6 +193,51 @@ const tests: IntegrationTest[] = [
       const diskContent = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
       assert.equal(diskContent, content)
       assert.equal(document.isDirty, false)
+    },
+  },
+  {
+    name: 'native VS Code save updates the sync base',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'native-save-updates-sync-base.md',
+        '# Native Save\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const content = '# Native Save\n\nSaved through VS Code.\n'
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await sendWebviewMessage(uri, { type: 'edit', content, revision: 1 })
+      await waitForDocumentText(document, content)
+
+      assert.equal(await document.save(), true)
+
+      await waitForWebviewMessage(uri, (message) => message.type === 'save-success')
+      await waitForProviderState(uri, (state) => state.baseContent === content)
+      await waitForProviderState(uri, (state) => state.lastAppliedFromWebview === content)
+      assert.equal(document.isDirty, false)
+    },
+  },
+  {
+    name: 'clean webview accepts external document change',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'clean-webview-accepts-external-change.md',
+        '# External Change\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const content = '# External Change\n\nChanged outside the webview.\n'
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await replaceDocument(document, content)
+
+      await waitForWebviewMessage(uri, (message) => {
+        return message.type === 'update' && message.content === content
+      })
+      await waitForProviderState(uri, (state) => {
+        return state.baseContent === content && state.webviewIsDirty === false
+      })
     },
   },
   {
@@ -407,6 +477,33 @@ async function releaseHeldWebviewEdit(uri: vscode.Uri, sessionIndex?: number): P
 
 async function getSessionCount(uri: vscode.Uri): Promise<number> {
   return await vscode.commands.executeCommand('humanMarkdown.test.sessionCount', uri.toString())
+}
+
+async function assertCommandRoutesToActiveEditor(
+  filename: string,
+  command: string,
+  expectedMessageType: string,
+): Promise<void> {
+  const uri = await writeWorkspaceFile(
+    filename,
+    '# Active Command\n\nRoute command messages to the active panel.\n',
+  )
+
+  await openHumanMarkdown(uri, vscode.ViewColumn.One)
+  await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+  await waitForSessionCount(uri, 2)
+  await clearWebviewMessages(uri, 0)
+  await clearWebviewMessages(uri, 1)
+
+  await vscode.commands.executeCommand(command)
+
+  await waitForWebviewMessage(uri, (message) => message.type === expectedMessageType, 1)
+  await settle()
+  const inactiveMessages = await getWebviewMessages(uri, 0)
+  assert.equal(
+    inactiveMessages.some((message) => message.type === expectedMessageType),
+    false,
+  )
 }
 
 async function openHumanMarkdown(uri: vscode.Uri, viewColumn?: vscode.ViewColumn): Promise<void> {

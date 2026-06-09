@@ -52,10 +52,10 @@ Prefer the sync controller extraction if it also simplifies production code.
 - [x] Open existing markdown as Human Markdown without changing text
 - [x] Default markdown association opens Human Markdown when configured
 - [x] Toggle command reaches the active custom editor
-- [ ] Find command reaches the active custom editor
-- [ ] Theme configuration broadcasts to open webviews
-- [ ] Native VS Code save updates the sync base
-- [ ] Clean webview accepts external document change
+- [x] Find command reaches the active custom editor
+- [x] Theme configuration broadcasts to open webviews
+- [x] Native VS Code save updates the sync base
+- [x] Clean webview accepts external document change
 
 ## Batch 3: Mode And Editor State
 
