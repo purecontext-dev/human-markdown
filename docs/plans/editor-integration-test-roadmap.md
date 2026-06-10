@@ -35,7 +35,7 @@ These tests target the current highest-risk findings from
     test if we later add controllable provider delays.
 - [x] Same file open in two editor groups sees shared updates
   - Covered for the simple clean-panel propagation case. Dirty competing-panel
-    behavior remains tracked in Batch 4 and the durability checklist.
+    behavior is now covered by Batch 4's stale peer-save integration test.
 
 Implementation note: `@vscode/test-electron` can launch VS Code and inspect the
 extension host, but it cannot directly drive sandboxed webview DOM by itself.
@@ -69,10 +69,10 @@ Prefer the sync controller extraction if it also simplifies production code.
 
 ## Batch 4: Multiple Panels
 
-- [ ] Same file open in two editor groups receives shared updates
-- [ ] Two panels do not silently overwrite each other during save
-- [ ] Closing one panel does not break sync for the other
-- [ ] Active webview routing sends commands to the selected panel
+- [x] Same file open in two editor groups receives shared updates
+- [x] Two panels do not silently overwrite each other during save
+- [x] Closing one panel does not break sync for the other
+- [x] Active webview routing sends commands to the selected panel
 
 ## Batch 5: Round-Trip Fidelity In Real VS Code
 

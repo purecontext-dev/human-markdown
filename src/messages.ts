@@ -11,7 +11,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'show-find' }
   | { type: 'image-uri-resolved'; src: string; webviewUri: string }
   | { type: 'save-success'; requestId?: number }
-  | { type: 'save-failed'; requestId?: number; reason?: 'apply' | 'save' }
+  | { type: 'save-failed'; requestId?: number; reason?: 'apply' | 'save' | 'stale-content' }
   | { type: 'auto-save'; enabled: boolean }
   | { type: 'undo' }
   | { type: 'redo' }

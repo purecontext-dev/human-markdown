@@ -59,10 +59,10 @@ describe('SaveController', () => {
     expect(hideConflict).toHaveBeenCalledOnce()
   })
 
-  it('handleFailure clears pending state without showing an error for host save failures', () => {
+  it('handleFailure shows error for host save failures', () => {
     ctrl.initiateSave()
     ctrl.handleFailure(1)
-    expect(showError).not.toHaveBeenCalled()
+    expect(showError).toHaveBeenCalledOnce()
     expect(ctrl.pendingSaveContent).toBeNull()
     expect(dirty).toBe(true)
   })
@@ -70,6 +70,14 @@ describe('SaveController', () => {
   it('handleFailure shows error for webview content flush failures', () => {
     ctrl.initiateSave()
     ctrl.handleFailure(1, 'apply')
+    expect(showError).toHaveBeenCalledOnce()
+    expect(ctrl.pendingSaveContent).toBeNull()
+    expect(dirty).toBe(true)
+  })
+
+  it('handleFailure shows error for stale content save failures', () => {
+    ctrl.initiateSave()
+    ctrl.handleFailure(1, 'stale-content')
     expect(showError).toHaveBeenCalledOnce()
     expect(ctrl.pendingSaveContent).toBeNull()
     expect(dirty).toBe(true)

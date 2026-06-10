@@ -263,7 +263,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'save': {
-          syncSession.enqueueSave(msg.content, msg.requestId)
+          syncSession.enqueueSave(msg.content, msg.requestId, webview)
           break
         }
       }
@@ -273,6 +273,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.onDidDispose(() => {
       this.webviews.delete(webview)
+      this.activateFallbackWebview(webview)
       syncSession.removeWebview(webview)
       this.disposeDocumentSyncSessionIfIdle(documentKey)
       this.removeTestSession(documentKey, testSession)
@@ -404,6 +405,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
+  private activateFallbackWebview(disposedWebview: vscode.Webview) {
+    if (this.activeWebview !== disposedWebview) return
+    this.activeWebview = this.webviews.values().next().value ?? null
+  }
+
   private getTestSession(uriString: string, sessionIndex?: number): TestSession | undefined {
     const sessions = this.testSessions.get(uriString)
     if (!sessions) return undefined
@@ -499,7 +505,8 @@ class DocumentSyncSession {
     this.baseContent = document.getText()
     this.webviewEditSequencer = new WebviewEditSequencer({
       applyEdit: (content, source) => this.applyWebviewEdit(content, this.asKnownWebview(source)),
-      save: (content, requestId) => this.saveWebviewContent(content, requestId),
+      save: (content, requestId, source) =>
+        this.saveWebviewContent(content, requestId, source as vscode.Webview | undefined),
       onHistoryEditApplied: () => {
         this.protectWebviewContentUntil = Date.now() + 750
       },
@@ -550,8 +557,8 @@ class DocumentSyncSession {
     this.webviewEditSequencer.enqueueEdit(content, revision, origin, source)
   }
 
-  enqueueSave(content: string, requestId?: number) {
-    this.webviewEditSequencer.enqueueSave(content, requestId)
+  enqueueSave(content: string, requestId?: number, source?: vscode.Webview) {
+    this.webviewEditSequencer.enqueueSave(content, requestId, source)
   }
 
   enqueueAcceptExternal() {
@@ -618,6 +625,7 @@ class DocumentSyncSession {
     const savedContent = this.document.getText()
     this.baseContent = savedContent
     this.lastAppliedFromWebview = savedContent
+    if (this.isSaving) return
     this.broadcast({ type: 'save-success' })
   }
 
@@ -696,10 +704,10 @@ class DocumentSyncSession {
     }
   }
 
-  private async saveWebviewContent(content: string, requestId?: number) {
+  private async saveWebviewContent(content: string, requestId?: number, source?: vscode.Webview) {
     const reportSaveSuccess = (savedContent: string) => {
       this.baseContent = savedContent
-      this.broadcast({ type: 'save-success', requestId })
+      this.postSaveResponse(source, { type: 'save-success', requestId })
     }
 
     const doSave = async () => {
@@ -712,15 +720,19 @@ class DocumentSyncSession {
         if (saved || !this.document.isDirty) {
           reportSaveSuccess(contentBeforeSave)
         } else {
-          this.broadcast({ type: 'save-failed', requestId, reason: 'save' })
+          this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'save' })
         }
       } catch {
         this.isSaving = false
-        this.broadcast({ type: 'save-failed', requestId, reason: 'save' })
+        this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'save' })
       }
     }
 
     if (content !== this.document.getText()) {
+      if (this.lastAppliedFromWebview !== content) {
+        this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'stale-content' })
+        return
+      }
       this.suppressDocumentChange(content)
       const edit = new vscode.WorkspaceEdit()
       edit.replace(this.document.uri, this.fullDocumentRange(), content)
@@ -729,7 +741,7 @@ class DocumentSyncSession {
         await doSave()
       } else {
         this.unsuppressDocumentChange(content)
-        this.broadcast({ type: 'save-failed', requestId, reason: 'apply' })
+        this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'apply' })
       }
     } else {
       await doSave()
@@ -774,6 +786,16 @@ class DocumentSyncSession {
     for (const webview of this.webviews) {
       this.post(webview, message)
     }
+  }
+
+  private postSaveResponse(source: vscode.Webview | undefined, message: ExtensionToWebviewMessage) {
+    if (source) {
+      if (this.webviews.has(source)) {
+        this.post(source, message)
+      }
+      return
+    }
+    this.broadcast(message)
   }
 
   private asKnownWebview(source: unknown): vscode.Webview | undefined {

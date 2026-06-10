@@ -53,7 +53,9 @@ each behavior before moving to the next item.
     `webviewIsDirty`, and `lastAppliedFromWebview` state.
   - Status: fixed in the shared sync session branch; `MarkdownEditorProvider`
     now keeps one `DocumentSyncSession` per document URI and each webview panel
-    only owns UI/message state.
+    only owns UI/message state. Follow-up Batch 4 integration coverage now
+    verifies peer updates, stale peer-save rejection, disposal of one panel, and
+    active-panel command routing.
   - Target outcome: multiple editor groups for the same markdown file coordinate
     through a per-document sync controller, while each panel only owns UI state.
   - Likely files: `src/editor-provider.ts`, possible new sync controller module,
