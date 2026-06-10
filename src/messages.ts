@@ -15,6 +15,9 @@ export type ExtensionToWebviewMessage =
   | { type: 'auto-save'; enabled: boolean }
   | { type: 'undo' }
   | { type: 'redo' }
+  | { type: 'test-set-raw-content'; content: string; requestId?: number }
+  | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
+  | { type: 'test-report-state'; requestId?: number }
 
 export type WebviewToExtensionMessage =
   | { type: 'ready' }
@@ -27,6 +30,14 @@ export type WebviewToExtensionMessage =
   | { type: 'resolve-image-uri'; src: string }
   | { type: 'save'; content: string; requestId?: number }
   | { type: 'auto-save-changed'; enabled: boolean }
+  | {
+      type: 'test-event'
+      name: string
+      requestId?: number
+      content?: string
+      mode?: 'preview' | 'raw'
+      scrollTop?: number
+    }
 
 export interface WebviewState {
   scrollTop: number

@@ -4,6 +4,7 @@ import type { EditorView } from '@codemirror/view'
 import {
   defaultValueCtx,
   Editor,
+  editorViewCtx,
   remarkCtx,
   remarkStringifyOptionsCtx,
   rootCtx,
@@ -86,8 +87,12 @@ type ExtensionMessage =
   | { type: 'auto-save'; enabled: boolean }
   | { type: 'undo' }
   | { type: 'redo' }
+  | { type: 'test-set-raw-content'; content: string; requestId?: number }
+  | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
+  | { type: 'test-report-state'; requestId?: number }
 
 const vscode = acquireVsCodeApi()
+const testHooksEnabled = document.body.dataset.testHooks === 'true'
 
 let milkdownEditor: Editor | null = null
 let cmEditor: EditorView | null = null
@@ -531,6 +536,58 @@ function redoCurrentMode() {
   }
 }
 
+function reportTestState(requestId?: number, name = 'state') {
+  if (!testHooksEnabled) return
+  vscode.postMessage({
+    type: 'test-event',
+    name,
+    requestId,
+    content: getAuthoritativeContent(),
+    mode: currentMode,
+    scrollTop: getPageScrollTop(),
+  })
+}
+
+function setRawContentForTest(content: string, requestId?: number) {
+  setMode('raw')
+  if (!cmEditor) {
+    reportTestState(requestId)
+    return
+  }
+
+  const cmContent = cmEditor.state.doc.toString()
+  const change = minimalChange(cmContent, content)
+  if (change) {
+    cmEditor.dispatch({ changes: change })
+  }
+  reportTestState(requestId)
+}
+
+function insertPreviewParagraphForTest(text: string, requestId?: number) {
+  setMode('preview')
+  if (!milkdownEditor) {
+    reportTestState(requestId)
+    return
+  }
+
+  milkdownEditor.action((ctx) => {
+    const view = ctx.get(editorViewCtx)
+    const { state } = view
+    const paragraph = state.schema.nodes.paragraph.create(null, state.schema.text(text))
+    view.dispatch(state.tr.insert(state.doc.content.size, paragraph))
+  })
+  currentContent = resolveWysiwygContent(
+    milkdownEditor,
+    currentContent,
+    baselineSerialized,
+    sourceMap,
+  )
+  setDirty(true)
+  postEdit(currentContent)
+  saveController.scheduleAutoSave()
+  reportTestState(requestId)
+}
+
 const saveController = new SaveController({
   getCurrentContent: getAuthoritativeContent,
   setDirty,
@@ -542,13 +599,35 @@ const saveController = new SaveController({
 
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
+function getPageScrollTop(): number {
+  return document.scrollingElement?.scrollTop ?? document.documentElement.scrollTop
+}
+
 function saveScrollState() {
   if (scrollTimer) clearTimeout(scrollTimer)
   scrollTimer = setTimeout(() => {
-    const state: WebviewState = { scrollTop: document.documentElement.scrollTop, mode: currentMode }
+    const state: WebviewState = { scrollTop: getPageScrollTop(), mode: currentMode }
     vscode.setState(state)
     vscode.postMessage({ type: 'save-state', state })
   }, 150)
+}
+
+function restoreScrollTop(scrollTop: number) {
+  const started = Date.now()
+  const apply = () => {
+    const scrollingElement = document.scrollingElement
+    if (scrollingElement) {
+      scrollingElement.scrollTop = scrollTop
+    }
+    document.documentElement.scrollTop = scrollTop
+    document.body.scrollTop = scrollTop
+    window.scrollTo(0, scrollTop)
+    if (getPageScrollTop() !== scrollTop && Date.now() - started < 1000) {
+      requestAnimationFrame(apply)
+    }
+  }
+
+  apply()
 }
 
 window.addEventListener('message', (event) => {
@@ -568,10 +647,10 @@ window.addEventListener('message', (event) => {
       conflictBar.show()
       break
     case 'restore-state':
-      document.documentElement.scrollTop = msg.state.scrollTop
       if (msg.state.mode) {
         setMode(msg.state.mode)
       }
+      restoreScrollTop(msg.state.scrollTop)
       break
     case 'theme':
       applyTheme(msg.tokens, document.documentElement)
@@ -609,6 +688,15 @@ window.addEventListener('message', (event) => {
       break
     case 'redo':
       redoCurrentMode()
+      break
+    case 'test-set-raw-content':
+      setRawContentForTest(msg.content, msg.requestId)
+      break
+    case 'test-insert-preview-paragraph':
+      insertPreviewParagraphForTest(msg.text, msg.requestId)
+      break
+    case 'test-report-state':
+      reportTestState(msg.requestId)
       break
   }
 })

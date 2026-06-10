@@ -9,9 +9,12 @@ import { WebviewEditSequencer } from './webview-edit-sequencer'
 interface TestSession {
   uri: vscode.Uri
   sendMessage: (msg: WebviewToExtensionMessage) => void
+  postMessage: (msg: ExtensionToWebviewMessage) => void
   getMessages: () => ExtensionToWebviewMessage[]
+  getWebviewEvents: () => WebviewToExtensionMessage[]
   getState: () => Record<string, unknown>
   clearMessages: () => void
+  clearWebviewEvents: () => void
   holdNextWebviewEdit: () => void
   releaseHeldWebviewEdit: () => void
 }
@@ -146,14 +149,20 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     syncSession.addWebview(webview)
     let onMessageReceived: (msg: WebviewToExtensionMessage) => void = () => {}
     const sessionMessages: ExtensionToWebviewMessage[] = []
+    const webviewEvents: WebviewToExtensionMessage[] = []
     const documentKey = document.uri.toString()
     const testSession: TestSession = {
       uri: document.uri,
       sendMessage: (msg) => onMessageReceived(msg),
+      postMessage: (msg) => this.postMessage(webview, msg),
       getMessages: () => [...sessionMessages],
+      getWebviewEvents: () => [...webviewEvents],
       getState: () => syncSession.getTestState(),
       clearMessages: () => {
         sessionMessages.length = 0
+      },
+      clearWebviewEvents: () => {
+        webviewEvents.length = 0
       },
       holdNextWebviewEdit: () => {
         syncSession.holdNextWebviewEdit()
@@ -169,6 +178,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
 
     onMessageReceived = (msg: WebviewToExtensionMessage) => {
+      if (msg.type === 'test-event') {
+        webviewEvents.push(msg)
+        return
+      }
       switch (msg.type) {
         case 'ready': {
           syncSession.syncBaseFromDocumentIfClean()
@@ -327,6 +340,18 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         },
       ),
       vscode.commands.registerCommand(
+        'humanMarkdown.test.postMessage',
+        (uriString: string, message: ExtensionToWebviewMessage, sessionIndex?: number) => {
+          this.getTestSession(uriString, sessionIndex)?.postMessage(message)
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.webviewEvents',
+        (uriString: string, sessionIndex?: number) => {
+          return this.getTestSession(uriString, sessionIndex)?.getWebviewEvents() ?? []
+        },
+      ),
+      vscode.commands.registerCommand(
         'humanMarkdown.test.state',
         (uriString: string, sessionIndex?: number) => {
           return this.getTestSession(uriString, sessionIndex)?.getState() ?? {}
@@ -336,6 +361,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         'humanMarkdown.test.clearMessages',
         (uriString: string, sessionIndex?: number) => {
           this.getTestSession(uriString, sessionIndex)?.clearMessages()
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.clearWebviewEvents',
+        (uriString: string, sessionIndex?: number) => {
+          this.getTestSession(uriString, sessionIndex)?.clearWebviewEvents()
         },
       ),
       vscode.commands.registerCommand(
@@ -420,7 +451,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <title>Human Markdown</title>
   <link rel="stylesheet" href="${styleUri}">
 </head>
-<body data-host="${vscode.env.appName === 'Cursor' ? 'cursor' : 'vscode'}" style="--hm-zoom-compensation: ${zoomCompensation}; --hm-cm-font-family: ${escapeFontFamily(fontFamily)}; --hm-cm-font-size: ${fontSize}px; --hm-cm-line-height: ${lineHeight}px;">
+<body data-host="${vscode.env.appName === 'Cursor' ? 'cursor' : 'vscode'}" data-test-hooks="${process.env.HUMAN_MARKDOWN_TEST_HOOKS === '1' ? 'true' : 'false'}" style="--hm-zoom-compensation: ${zoomCompensation}; --hm-cm-font-family: ${escapeFontFamily(fontFamily)}; --hm-cm-font-size: ${fontSize}px; --hm-cm-line-height: ${lineHeight}px;">
   <div id="hm-banner">
     <span class="hm-banner-label">Human Markdown</span>
     <span class="hm-banner-hint" title="Cursor has its own markdown toggle in the tab bar. Use the button below to switch modes — Cursor's toggle will switch you out of Human Markdown.">Use the toggle below to switch modes</span>

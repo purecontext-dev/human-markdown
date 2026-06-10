@@ -1,0 +1,40 @@
+{
+  "plugin_version": "2.0.0",
+  "gates": [
+    {
+      "id": "error-surfacing",
+      "instruction": "Every function with a catch block or early-return guard — verify the caller can distinguish failure from a legitimate empty result. Prefer throwing or pushing to an error channel over silent defaults (returning [] or null on error).",
+      "triggers": ["next"],
+      "severity": "block",
+      "detection": "always"
+    },
+    {
+      "id": "fault-isolation-symmetry",
+      "instruction": "When writing a collection-processing function, check if sibling functions of the same shape exist. Use the same fault-isolation pattern — if one has per-item try/catch, the other should too.",
+      "triggers": ["next"],
+      "severity": "warn",
+      "detection": "always"
+    },
+    {
+      "id": "async-state-timing",
+      "instruction": "Guard flags and state updates must happen at the right time relative to async operations. Set guard flags after the operation succeeds (or clean up in finally). Don't update UI state (dirty flags, base content, progress indicators) before the async call confirms.",
+      "triggers": ["next"],
+      "severity": "block",
+      "detection": "always"
+    },
+    {
+      "id": "error-path-tests",
+      "instruction": "After writing tests, verify each new catch/error path has a test that triggers it. If the error handling code can be deleted without a test failing, add a test.",
+      "triggers": ["next", "ship"],
+      "severity": "block",
+      "detection": "always"
+    },
+    {
+      "id": "api-contract-completeness",
+      "instruction": "Functions called from API endpoints or CLI commands must either throw on failure or return a distinguishable error state. Don't resolve successfully with internal-only error accounting.",
+      "triggers": ["next"],
+      "severity": "block",
+      "detection": "always"
+    }
+  ]
+}

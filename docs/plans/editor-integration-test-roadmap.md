@@ -59,12 +59,13 @@ Prefer the sync controller extraction if it also simplifies production code.
 
 ## Batch 3: Mode And Editor State
 
-- [ ] Raw mode edit persists after toggling to rendered mode
-- [ ] WYSIWYG edit persists after toggling to raw mode
-- [ ] Untouched raw-to-rendered-to-raw round trip preserves bytes
-- [ ] Undo/redo in WYSIWYG updates document
-- [ ] Undo/redo in raw mode updates document
-- [ ] Scroll/mode state restores after panel reload
+- [x] Raw mode edit persists after toggling to rendered mode
+- [x] WYSIWYG edit persists after toggling to raw mode
+- [x] Untouched raw-to-rendered-to-raw round trip preserves bytes
+- [x] Undo/redo in WYSIWYG updates document
+- [x] Undo/redo in raw mode updates document
+- [x] Mode state restores after panel reload
+- [ ] Scroll state restores after panel reload
 
 ## Batch 4: Multiple Panels
 

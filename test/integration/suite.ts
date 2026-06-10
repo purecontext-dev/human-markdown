@@ -510,7 +510,146 @@ const tests: IntegrationTest[] = [
       )
     },
   },
+  {
+    name: 'raw mode edit persists after toggling to rendered mode',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'raw-mode-edit-toggle-rendered.md',
+        '# Raw Mode\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const edited = '# Raw Mode\n\nEdited in raw mode.\n'
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await clearWebviewEvents(uri)
+
+      await setRawContent(uri, edited)
+      await waitForDocumentText(document, edited)
+      await waitForWebviewState(uri, (event) => {
+        return event.mode === 'raw' && event.content === edited
+      })
+
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      await reportWebviewState(uri)
+
+      await waitForWebviewState(uri, (event) => {
+        return event.mode === 'preview' && event.content === edited
+      })
+      assert.equal(document.getText(), edited)
+      assert.equal(document.isDirty, true)
+    },
+  },
+  {
+    name: 'WYSIWYG edit persists after toggling to raw mode',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'wysiwyg-edit-toggle-raw.md',
+        '# WYSIWYG Mode\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri)
+      await clearWebviewEvents(uri)
+      await insertPreviewParagraph(uri, 'Edited in WYSIWYG mode.')
+      await waitForDocumentTextContaining(document, 'Edited in WYSIWYG mode.')
+
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      const state = await reportWebviewState(uri)
+
+      assert.equal(state.mode, 'raw')
+      assert.match(String(state.content), /Edited in WYSIWYG mode\./)
+      assert.match(document.getText(), /Edited in WYSIWYG mode\./)
+      assert.equal(document.isDirty, true)
+    },
+  },
+  {
+    name: 'untouched raw-to-rendered-to-raw round trip preserves bytes',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'untouched-raw-rendered-raw.md',
+        '# Raw Round Trip\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const raw = '# Raw Round Trip\n\nhttp://example.com/a*b\n\nsee https://example.com here\n'
+
+      await openHumanMarkdown(uri)
+      await clearWebviewEvents(uri)
+      await setRawContent(uri, raw)
+      await waitForDocumentText(document, raw)
+
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      await reportWebviewState(uri)
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      const state = await reportWebviewState(uri)
+
+      assert.equal(state.mode, 'raw')
+      assert.equal(state.content, raw)
+      assert.equal(document.getText(), raw)
+    },
+  },
+  {
+    name: 'undo/redo in WYSIWYG updates document',
+    run: async () => {
+      const initial = '# WYSIWYG Undo\n\nOriginal content.\n'
+      const uri = await writeWorkspaceFile('wysiwyg-undo-redo.md', initial)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri)
+      await insertPreviewParagraph(uri, 'Undoable WYSIWYG paragraph.')
+      const edited = document.getText()
+      assert.match(edited, /Undoable WYSIWYG paragraph\./)
+
+      await vscode.commands.executeCommand('humanMarkdown.undo')
+      await waitForDocumentText(document, initial)
+
+      await vscode.commands.executeCommand('humanMarkdown.redo')
+      await waitForDocumentText(document, edited)
+    },
+  },
+  {
+    name: 'undo/redo in raw mode updates document',
+    run: async () => {
+      const initial = '# Raw Undo\n\nOriginal content.\n'
+      const edited = '# Raw Undo\n\nEdited in raw mode.\n'
+      const uri = await writeWorkspaceFile('raw-undo-redo.md', initial)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri)
+      await setRawContent(uri, edited)
+      await waitForDocumentText(document, edited)
+
+      await vscode.commands.executeCommand('humanMarkdown.undo')
+      await waitForDocumentText(document, initial)
+
+      await vscode.commands.executeCommand('humanMarkdown.redo')
+      await waitForDocumentText(document, edited)
+    },
+  },
+  {
+    name: 'mode state restores after panel reload',
+    run: async () => {
+      const modeUri = await writeWorkspaceFile(
+        'restore-mode-state.md',
+        '# Restore Mode\n\nRaw mode.\n',
+      )
+      await openHumanMarkdown(modeUri)
+      await clearWebviewMessages(modeUri)
+      await sendWebviewMessage(modeUri, {
+        type: 'save-state',
+        state: { scrollTop: 0, mode: 'raw' },
+      })
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+      await waitForSessionCount(modeUri, 0)
+
+      await openHumanMarkdown(modeUri)
+      const modeState = await reportWebviewState(modeUri)
+      assert.equal(modeState.mode, 'raw')
+    },
+  },
 ]
+
+let nextRequestId = 1
 
 export async function run(): Promise<void> {
   for (const test of tests) {
@@ -557,12 +696,36 @@ async function sendWebviewMessage(
   )
 }
 
+async function postWebviewMessage(
+  uri: vscode.Uri,
+  message: unknown,
+  sessionIndex?: number,
+): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.postMessage',
+    uri.toString(),
+    message,
+    sessionIndex,
+  )
+}
+
 async function getWebviewMessages(
   uri: vscode.Uri,
   sessionIndex?: number,
 ): Promise<Array<Record<string, unknown>>> {
   return await vscode.commands.executeCommand(
     'humanMarkdown.test.messages',
+    uri.toString(),
+    sessionIndex,
+  )
+}
+
+async function getWebviewEvents(
+  uri: vscode.Uri,
+  sessionIndex?: number,
+): Promise<Array<Record<string, unknown>>> {
+  return await vscode.commands.executeCommand(
+    'humanMarkdown.test.webviewEvents',
     uri.toString(),
     sessionIndex,
   )
@@ -583,6 +746,48 @@ async function clearWebviewMessages(uri: vscode.Uri, sessionIndex?: number): Pro
   await vscode.commands.executeCommand(
     'humanMarkdown.test.clearMessages',
     uri.toString(),
+    sessionIndex,
+  )
+}
+
+async function clearWebviewEvents(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.clearWebviewEvents',
+    uri.toString(),
+    sessionIndex,
+  )
+}
+
+async function setRawContent(uri: vscode.Uri, content: string, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-set-raw-content', content, requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function reportWebviewState(uri: vscode.Uri, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-report-state', requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function insertPreviewParagraph(uri: vscode.Uri, text: string, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(
+    uri,
+    { type: 'test-insert-preview-paragraph', text, requestId },
+    sessionIndex,
+  )
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
     sessionIndex,
   )
 }
@@ -656,6 +861,21 @@ async function waitForWebviewMessage(
   }, `Expected matching webview message for ${uri.toString()}`)
 }
 
+async function waitForWebviewState(
+  uri: vscode.Uri,
+  predicate: (event: Record<string, unknown>) => boolean,
+  sessionIndex?: number,
+): Promise<Record<string, unknown>> {
+  let matched: Record<string, unknown> | undefined
+  await waitFor(async () => {
+    const events = await getWebviewEvents(uri, sessionIndex)
+    matched = events.find(predicate)
+    return matched !== undefined
+  }, `Expected matching webview state for ${uri.toString()}`)
+  assert.ok(matched)
+  return matched
+}
+
 async function createConflict(
   uri: vscode.Uri,
   document: vscode.TextDocument,
@@ -703,6 +923,16 @@ async function waitForDocumentText(document: vscode.TextDocument, expected: stri
   await waitFor(
     () => document.getText() === expected,
     `Expected document text to be ${JSON.stringify(expected)}, got ${JSON.stringify(document.getText())}`,
+  )
+}
+
+async function waitForDocumentTextContaining(
+  document: vscode.TextDocument,
+  expected: string,
+): Promise<void> {
+  await waitFor(
+    () => document.getText().includes(expected),
+    `Expected document text to contain ${JSON.stringify(expected)}, got ${JSON.stringify(document.getText())}`,
   )
 }
 
