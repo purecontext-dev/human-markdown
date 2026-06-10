@@ -333,6 +333,53 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'accept external waits for in-flight webview edit and cancels stale queued edits',
+    run: async () => {
+      const disk = 'A\nB\nC\n'
+      const stale = 'A stale queued local\nB\nC\n'
+      const uri = await writeWorkspaceFile('accept-external-serializes-with-edits.md', disk)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+      await holdNextWebviewEdit(uri)
+      await sendWebviewMessage(
+        uri,
+        {
+          type: 'edit',
+          content: 'A in-flight local\nB\nC\n',
+          revision: 1,
+        },
+        0,
+      )
+      await waitForProviderState(uri, (state) => state.heldWebviewEditStarted === true)
+      await sendWebviewMessage(uri, { type: 'edit', content: stale, revision: 2 }, 0)
+      await sendWebviewMessage(uri, { type: 'accept-external' }, 0)
+
+      await settle()
+      assert.equal(document.getText(), disk)
+      await releaseHeldWebviewEdit(uri)
+
+      await waitForDocumentText(document, disk)
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'update' && message.content === disk,
+        1,
+      )
+      await waitForProviderState(uri, (state) => {
+        return state.webviewIsDirty === false && state.lastAppliedFromWebview === null
+      })
+      const peerMessages = await getWebviewMessages(uri, 1)
+      assert.equal(
+        peerMessages.some((message) => message.type === 'update' && message.content === stale),
+        false,
+      )
+    },
+  },
+  {
     name: 'keep mine preserves local content and stays dirty until saved',
     run: async () => {
       const uri = await writeWorkspaceFile('keep-mine-stays-dirty.md', 'A\nB\nC\n')
@@ -346,6 +393,54 @@ const tests: IntegrationTest[] = [
       await waitForDocumentText(document, local)
       await waitForProviderState(uri, (state) => state.webviewIsDirty === true)
       assert.equal(document.isDirty, true)
+    },
+  },
+  {
+    name: 'keep mine waits for in-flight webview edit and cancels stale queued edits',
+    run: async () => {
+      const uri = await writeWorkspaceFile('keep-mine-serializes-with-edits.md', 'A\nB\nC\n')
+      const document = await vscode.workspace.openTextDocument(uri)
+      const kept = 'A kept local\nB\nC\n'
+      const stale = 'A stale queued local\nB\nC\n'
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+      await holdNextWebviewEdit(uri)
+      await sendWebviewMessage(
+        uri,
+        {
+          type: 'edit',
+          content: 'A in-flight local\nB\nC\n',
+          revision: 1,
+        },
+        0,
+      )
+      await waitForProviderState(uri, (state) => state.heldWebviewEditStarted === true)
+      await sendWebviewMessage(uri, { type: 'edit', content: stale, revision: 2 }, 0)
+      await sendWebviewMessage(uri, { type: 'keep-mine', content: kept }, 0)
+
+      await settle()
+      assert.notEqual(document.getText(), kept)
+      await releaseHeldWebviewEdit(uri)
+
+      await waitForDocumentText(document, kept)
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'update' && message.content === kept,
+        1,
+      )
+      await waitForProviderState(uri, (state) => {
+        return state.webviewIsDirty === true && state.lastAppliedFromWebview === kept
+      })
+      assert.equal(document.isDirty, true)
+      const peerMessages = await getWebviewMessages(uri, 1)
+      assert.equal(
+        peerMessages.some((message) => message.type === 'update' && message.content === stale),
+        false,
+      )
     },
   },
   {
