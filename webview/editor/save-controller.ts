@@ -46,14 +46,12 @@ export class SaveController {
     this.rescheduleIfDirty(savedContent)
   }
 
-  handleFailure(requestId?: number, reason: 'apply' | 'save' | 'stale-content' = 'save') {
+  handleFailure(requestId?: number, _reason: 'apply' | 'save' | 'stale-content' = 'save') {
     if (!this.isCurrentSaveResponse(requestId)) return
     const savedContent = this.pendingSaveContent
     this.pendingSaveContent = null
     this.pendingSaveRequestId = null
-    if (reason === 'apply' || reason === 'stale-content') {
-      this.cb.showError()
-    }
+    this.cb.showError()
     this.autoSaveFailures++
     if (this.autoSaveFailures < MAX_AUTO_SAVE_RETRIES) {
       this.rescheduleIfDirty(savedContent)

@@ -59,10 +59,10 @@ describe('SaveController', () => {
     expect(hideConflict).toHaveBeenCalledOnce()
   })
 
-  it('handleFailure clears pending state without showing an error for host save failures', () => {
+  it('handleFailure shows error for host save failures', () => {
     ctrl.initiateSave()
     ctrl.handleFailure(1)
-    expect(showError).not.toHaveBeenCalled()
+    expect(showError).toHaveBeenCalledOnce()
     expect(ctrl.pendingSaveContent).toBeNull()
     expect(dirty).toBe(true)
   })
