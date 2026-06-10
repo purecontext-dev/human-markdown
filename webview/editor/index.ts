@@ -4,6 +4,7 @@ import type { EditorView } from '@codemirror/view'
 import {
   defaultValueCtx,
   Editor,
+  editorViewCtx,
   remarkCtx,
   remarkStringifyOptionsCtx,
   rootCtx,
@@ -86,6 +87,9 @@ type ExtensionMessage =
   | { type: 'auto-save'; enabled: boolean }
   | { type: 'undo' }
   | { type: 'redo' }
+  | { type: 'test-set-raw-content'; content: string; requestId?: number }
+  | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
+  | { type: 'test-report-state'; requestId?: number }
 
 const vscode = acquireVsCodeApi()
 
@@ -531,6 +535,57 @@ function redoCurrentMode() {
   }
 }
 
+function reportTestState(requestId?: number) {
+  vscode.postMessage({
+    type: 'test-event',
+    name: 'state',
+    requestId,
+    content: getAuthoritativeContent(),
+    mode: currentMode,
+    scrollTop: document.documentElement.scrollTop,
+  })
+}
+
+function setRawContentForTest(content: string, requestId?: number) {
+  setMode('raw')
+  if (!cmEditor) {
+    reportTestState(requestId)
+    return
+  }
+
+  const cmContent = cmEditor.state.doc.toString()
+  const change = minimalChange(cmContent, content)
+  if (change) {
+    cmEditor.dispatch({ changes: change })
+  }
+  reportTestState(requestId)
+}
+
+function insertPreviewParagraphForTest(text: string, requestId?: number) {
+  setMode('preview')
+  if (!milkdownEditor) {
+    reportTestState(requestId)
+    return
+  }
+
+  milkdownEditor.action((ctx) => {
+    const view = ctx.get(editorViewCtx)
+    const { state } = view
+    const paragraph = state.schema.nodes.paragraph.create(null, state.schema.text(text))
+    view.dispatch(state.tr.insert(state.doc.content.size, paragraph))
+  })
+  currentContent = resolveWysiwygContent(
+    milkdownEditor,
+    currentContent,
+    baselineSerialized,
+    sourceMap,
+  )
+  setDirty(true)
+  postEdit(currentContent)
+  saveController.scheduleAutoSave()
+  reportTestState(requestId)
+}
+
 const saveController = new SaveController({
   getCurrentContent: getAuthoritativeContent,
   setDirty,
@@ -609,6 +664,15 @@ window.addEventListener('message', (event) => {
       break
     case 'redo':
       redoCurrentMode()
+      break
+    case 'test-set-raw-content':
+      setRawContentForTest(msg.content, msg.requestId)
+      break
+    case 'test-insert-preview-paragraph':
+      insertPreviewParagraphForTest(msg.text, msg.requestId)
+      break
+    case 'test-report-state':
+      reportTestState(msg.requestId)
       break
   }
 })
