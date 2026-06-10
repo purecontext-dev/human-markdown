@@ -147,6 +147,11 @@ function postEdit(content: string, origin: 'history' | 'edit' = 'edit') {
   vscode.postMessage({ type: 'edit', content, revision: webviewEditRevision, origin })
 }
 
+function postTestEvent(event: Record<string, unknown>) {
+  if (!testHooksEnabled) return
+  vscode.postMessage({ type: 'test-event', ...event })
+}
+
 function pauseMilkdownListenerAfterHistoryCommand() {
   ignoreMilkdownUpdatesUntil = Date.now() + 750
   saveController.deferAutoSave(750)
@@ -393,6 +398,7 @@ async function initMilkdown(content: string) {
     })
     baselineSerialized = serializeWysiwygDoc(milkdownEditor)
     sourceMap = baselineSerialized ? buildSourceMap(content, baselineSerialized) : null
+    postTestEvent({ name: 'milkdown-ready', mode: currentMode, content: currentContent })
   } catch (err) {
     milkdownEditor = null
     renderFallback(root, content, err)

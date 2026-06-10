@@ -766,7 +766,9 @@ const tests: IntegrationTest[] = [
       const document = await vscode.workspace.openTextDocument(uri)
 
       await openHumanMarkdown(uri)
-      await clearWebviewEvents(uri)
+      const previewState = await waitForMilkdownReady(uri)
+      assert.equal(previewState.mode, 'preview')
+      assert.equal(previewState.content, initial)
       await vscode.commands.executeCommand('humanMarkdown.toggle')
       const state = await reportWebviewState(uri)
       assert.equal(await document.save(), true)
@@ -999,6 +1001,10 @@ async function reportWebviewState(uri: vscode.Uri, sessionIndex?: number) {
     (event) => event.name === 'state' && event.requestId === requestId,
     sessionIndex,
   )
+}
+
+async function waitForMilkdownReady(uri: vscode.Uri, sessionIndex?: number) {
+  return await waitForWebviewState(uri, (event) => event.name === 'milkdown-ready', sessionIndex)
 }
 
 async function waitForReportedWebviewState(
