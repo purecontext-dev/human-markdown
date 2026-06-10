@@ -619,6 +619,7 @@ class DocumentSyncSession {
     const savedContent = this.document.getText()
     this.baseContent = savedContent
     this.lastAppliedFromWebview = savedContent
+    if (this.isSaving) return
     this.broadcast({ type: 'save-success' })
   }
 

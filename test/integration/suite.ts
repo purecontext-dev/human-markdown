@@ -567,9 +567,7 @@ const tests: IntegrationTest[] = [
       await settle()
       const secondPanelMessages = await getWebviewMessages(uri, 1)
       assert.equal(
-        secondPanelMessages.some(
-          (message) => message.type === 'save-success' && message.requestId === 1,
-        ),
+        secondPanelMessages.some((message) => message.type === 'save-success'),
         false,
       )
       assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), firstEdit)
