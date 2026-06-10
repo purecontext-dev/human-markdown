@@ -46,7 +46,7 @@ See `docs/spec/` for full planning documents and `docs/adrs/` for architectural 
 
 ## Testing
 
-Unit tests with Vitest. Focus on round-trip fidelity (markdown → edit → markdown), theme token injection, bundle size budgets. No webview integration tests.
+Unit tests with Vitest. Integration tests launch a VS Code Extension Host and exercise custom-editor webview flows. Focus on round-trip fidelity (markdown → edit → markdown), theme token injection, bundle size budgets, and editor state restoration.
 
 ## Development Roadmap
 
