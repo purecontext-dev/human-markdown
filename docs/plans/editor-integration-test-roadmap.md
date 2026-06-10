@@ -76,7 +76,7 @@ Prefer the sync controller extraction if it also simplifies production code.
 
 ## Batch 5: Round-Trip Fidelity In Real VS Code
 
-- [ ] Bare URLs preserve expected bytes when untouched
+- [x] Bare URLs preserve expected bytes when untouched
 - [ ] Tables do not drift when untouched
 - [ ] Lists preserve tight/loose behavior
 - [ ] Frontmatter survives open/toggle/save
