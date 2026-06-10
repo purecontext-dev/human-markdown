@@ -273,6 +273,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.onDidDispose(() => {
       this.webviews.delete(webview)
+      this.activateFallbackWebview(webview)
       syncSession.removeWebview(webview)
       this.disposeDocumentSyncSessionIfIdle(documentKey)
       this.removeTestSession(documentKey, testSession)
@@ -402,6 +403,11 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     } else {
       this.testSessions.set(documentKey, remaining)
     }
+  }
+
+  private activateFallbackWebview(disposedWebview: vscode.Webview) {
+    if (this.activeWebview !== disposedWebview) return
+    this.activeWebview = this.webviews.values().next().value ?? null
   }
 
   private getTestSession(uriString: string, sessionIndex?: number): TestSession | undefined {

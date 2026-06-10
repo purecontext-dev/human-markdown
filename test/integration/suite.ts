@@ -590,6 +590,12 @@ const tests: IntegrationTest[] = [
       await waitForSessionCount(uri, 1)
       await clearWebviewMessages(uri, 0)
 
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      await vscode.commands.executeCommand('humanMarkdown.find')
+      await waitForWebviewMessage(uri, (message) => message.type === 'toggle-mode', 0)
+      await waitForWebviewMessage(uri, (message) => message.type === 'show-find', 0)
+      await clearWebviewMessages(uri, 0)
+
       await sendWebviewMessage(uri, { type: 'edit', content: edited, revision: 1 }, 0)
       await waitForDocumentText(document, edited)
       await sendWebviewMessage(uri, { type: 'save', content: edited, requestId: 1301 }, 0)
