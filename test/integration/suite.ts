@@ -647,6 +647,38 @@ const tests: IntegrationTest[] = [
       assert.equal(modeState.mode, 'raw')
     },
   },
+  {
+    name: 'scroll state restores after panel reload',
+    run: async () => {
+      const content = [
+        '# Restore Scroll',
+        '',
+        ...Array.from({ length: 120 }, (_, index) => [
+          `Paragraph ${index + 1}: keep me tall.`,
+          '',
+        ]).flat(),
+        '',
+      ].join('\n')
+      const uri = await writeWorkspaceFile('restore-scroll-state.md', content)
+      const restoredScrollTop = 480
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await sendWebviewMessage(uri, {
+        type: 'save-state',
+        state: { scrollTop: restoredScrollTop, mode: 'preview' },
+      })
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+      await waitForSessionCount(uri, 0)
+
+      await openHumanMarkdown(uri)
+      const state = await waitForReportedWebviewState(uri, (event) => {
+        return event.mode === 'preview' && event.scrollTop === restoredScrollTop
+      })
+
+      assert.equal(state.scrollTop, restoredScrollTop)
+    },
+  },
 ]
 
 let nextRequestId = 1
@@ -775,6 +807,28 @@ async function reportWebviewState(uri: vscode.Uri, sessionIndex?: number) {
     uri,
     (event) => event.name === 'state' && event.requestId === requestId,
     sessionIndex,
+  )
+}
+
+async function waitForReportedWebviewState(
+  uri: vscode.Uri,
+  predicate: (event: Record<string, unknown>) => boolean,
+  sessionIndex?: number,
+): Promise<Record<string, unknown>> {
+  const started = Date.now()
+  let lastState: Record<string, unknown> | undefined
+  while (Date.now() - started < 5000) {
+    const state = await reportWebviewState(uri, sessionIndex)
+    lastState = state
+    if (predicate(state)) {
+      return state
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  assert.fail(
+    `Expected matching reported webview state for ${uri.toString()}, last state: ${JSON.stringify(
+      lastState,
+    )}`,
   )
 }
 

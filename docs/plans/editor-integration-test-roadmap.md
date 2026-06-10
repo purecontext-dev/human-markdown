@@ -65,7 +65,7 @@ Prefer the sync controller extraction if it also simplifies production code.
 - [x] Undo/redo in WYSIWYG updates document
 - [x] Undo/redo in raw mode updates document
 - [x] Mode state restores after panel reload
-- [ ] Scroll state restores after panel reload
+- [x] Scroll state restores after panel reload
 
 ## Batch 4: Multiple Panels
 

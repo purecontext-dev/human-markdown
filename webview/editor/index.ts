@@ -113,6 +113,7 @@ const ignoredMarkdownSnapshots = new Set<string>()
 // (return faithful disk bytes), avoiding round-trip drift. See resolve-content.ts.
 let baselineSerialized: string | null = null
 let sourceMap: SourceMap | null = null
+let pendingRestoreScrollTop: number | null = null
 
 const previewContainer = document.getElementById('preview-container') as HTMLElement
 const cmContainer = document.getElementById('codemirror-container') as HTMLElement
@@ -399,6 +400,9 @@ async function initMilkdown(content: string) {
 
   requestAnimationFrame(() => {
     syncingContent = false
+    if (pendingRestoreScrollTop !== null) {
+      restoreScrollTop(pendingRestoreScrollTop)
+    }
   })
 
   initInProgress = false
@@ -613,16 +617,23 @@ function saveScrollState() {
 }
 
 function restoreScrollTop(scrollTop: number) {
+  pendingRestoreScrollTop = scrollTop
   const started = Date.now()
   const apply = () => {
+    if (pendingRestoreScrollTop === null) return
+    const targetScrollTop = pendingRestoreScrollTop
     const scrollingElement = document.scrollingElement
     if (scrollingElement) {
-      scrollingElement.scrollTop = scrollTop
+      scrollingElement.scrollTop = targetScrollTop
     }
-    document.documentElement.scrollTop = scrollTop
-    document.body.scrollTop = scrollTop
-    window.scrollTo(0, scrollTop)
-    if (getPageScrollTop() !== scrollTop && Date.now() - started < 1000) {
+    document.documentElement.scrollTop = targetScrollTop
+    document.body.scrollTop = targetScrollTop
+    window.scrollTo(0, targetScrollTop)
+    if (getPageScrollTop() === targetScrollTop) {
+      pendingRestoreScrollTop = null
+      return
+    }
+    if (Date.now() - started < 3000) {
       requestAnimationFrame(apply)
     }
   }
