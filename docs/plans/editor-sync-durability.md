@@ -69,12 +69,15 @@ each behavior before moving to the next item.
     `webview/editor/source-splice.test.ts`,
     `webview/editor/spliced-resolve.test.ts`.
 
-- [ ] **Add host-level sync integration coverage**
+- [x] **Add host-level sync integration coverage**
   - Current tests cover save control, sequencing, and round-trip fidelity, but
     not the full provider state machine for queued edits, saves, conflict
     resolution, external changes, and multiple panels.
   - Initial Extension Host harness added via `pnpm test:integration`; it verifies
     activation, custom-editor open, and backing `TextDocument` usability.
+  - Status: fixed in the host sync integration coverage branch; provider
+    integration tests now exercise conflict resolution behind in-flight edits
+    and verify stale queued webview edits cannot win afterward.
   - Target outcome: a mocked `MarkdownEditorProvider` harness exercises the
     real message flow and guards the highest-risk interleavings.
   - Likely files: new `src/editor-provider-sync.test.ts` or extracted sync

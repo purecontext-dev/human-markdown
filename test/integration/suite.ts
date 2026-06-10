@@ -333,6 +333,42 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'accept external waits for in-flight webview edit and cancels stale queued edits',
+    run: async () => {
+      const disk = 'A\nB\nC\n'
+      const uri = await writeWorkspaceFile('accept-external-serializes-with-edits.md', disk)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await holdNextWebviewEdit(uri)
+      await sendWebviewMessage(uri, {
+        type: 'edit',
+        content: 'A in-flight local\nB\nC\n',
+        revision: 1,
+      })
+      await waitForProviderState(uri, (state) => state.heldWebviewEditStarted === true)
+      await sendWebviewMessage(uri, {
+        type: 'edit',
+        content: 'A stale queued local\nB\nC\n',
+        revision: 2,
+      })
+      await sendWebviewMessage(uri, { type: 'accept-external' })
+
+      await settle()
+      assert.equal(document.getText(), disk)
+      await releaseHeldWebviewEdit(uri)
+
+      await waitForDocumentText(document, disk)
+      await waitForWebviewMessage(uri, (message) => {
+        return message.type === 'update' && message.content === disk
+      })
+      await waitForProviderState(uri, (state) => {
+        return state.webviewIsDirty === false && state.lastAppliedFromWebview === null
+      })
+    },
+  },
+  {
     name: 'keep mine preserves local content and stays dirty until saved',
     run: async () => {
       const uri = await writeWorkspaceFile('keep-mine-stays-dirty.md', 'A\nB\nC\n')
@@ -345,6 +381,40 @@ const tests: IntegrationTest[] = [
 
       await waitForDocumentText(document, local)
       await waitForProviderState(uri, (state) => state.webviewIsDirty === true)
+      assert.equal(document.isDirty, true)
+    },
+  },
+  {
+    name: 'keep mine waits for in-flight webview edit and cancels stale queued edits',
+    run: async () => {
+      const uri = await writeWorkspaceFile('keep-mine-serializes-with-edits.md', 'A\nB\nC\n')
+      const document = await vscode.workspace.openTextDocument(uri)
+      const kept = 'A kept local\nB\nC\n'
+
+      await openHumanMarkdown(uri)
+      await clearWebviewMessages(uri)
+      await holdNextWebviewEdit(uri)
+      await sendWebviewMessage(uri, {
+        type: 'edit',
+        content: 'A in-flight local\nB\nC\n',
+        revision: 1,
+      })
+      await waitForProviderState(uri, (state) => state.heldWebviewEditStarted === true)
+      await sendWebviewMessage(uri, {
+        type: 'edit',
+        content: 'A stale queued local\nB\nC\n',
+        revision: 2,
+      })
+      await sendWebviewMessage(uri, { type: 'keep-mine', content: kept })
+
+      await settle()
+      assert.notEqual(document.getText(), kept)
+      await releaseHeldWebviewEdit(uri)
+
+      await waitForDocumentText(document, kept)
+      await waitForProviderState(uri, (state) => {
+        return state.webviewIsDirty === true && state.lastAppliedFromWebview === kept
+      })
       assert.equal(document.isDirty, true)
     },
   },
