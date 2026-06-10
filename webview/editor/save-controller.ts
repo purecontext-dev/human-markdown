@@ -51,7 +51,7 @@ export class SaveController {
     const savedContent = this.pendingSaveContent
     this.pendingSaveContent = null
     this.pendingSaveRequestId = null
-    if (reason === 'apply') {
+    if (reason === 'apply' || reason === 'stale-content') {
       this.cb.showError()
     }
     this.autoSaveFailures++

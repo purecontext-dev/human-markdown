@@ -63,8 +63,8 @@ describe('WebviewEditSequencer', () => {
         documentText = content
         return true
       },
-      save: async (content, requestId) => {
-        events.push(`save:${content}:${requestId}`)
+      save: async (content, requestId, source) => {
+        events.push(`save:${content}:${requestId}:${source === firstSource ? 'first' : 'unknown'}`)
         expect(documentText).toBe('restored-word-state')
       },
     })
@@ -72,7 +72,8 @@ describe('WebviewEditSequencer', () => {
     const firstEdit = sequencer.enqueueEdit('deleted-word-state', 1)
     await firstEditDidStart
     const historyEdit = sequencer.enqueueEdit('restored-word-state', 2, 'history')
-    const save = sequencer.enqueueSave('restored-word-state', 42)
+    const firstSource = {}
+    const save = sequencer.enqueueSave('restored-word-state', 42, firstSource)
 
     finishFirstEdit()
     await Promise.all([firstEdit, historyEdit, save])
@@ -80,7 +81,7 @@ describe('WebviewEditSequencer', () => {
     expect(events).toEqual([
       'apply:deleted-word-state',
       'apply:restored-word-state',
-      'save:restored-word-state:42',
+      'save:restored-word-state:42:first',
     ])
   })
 

@@ -263,7 +263,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           break
         }
         case 'save': {
-          syncSession.enqueueSave(msg.content, msg.requestId)
+          syncSession.enqueueSave(msg.content, msg.requestId, webview)
           break
         }
       }
@@ -499,7 +499,8 @@ class DocumentSyncSession {
     this.baseContent = document.getText()
     this.webviewEditSequencer = new WebviewEditSequencer({
       applyEdit: (content, source) => this.applyWebviewEdit(content, this.asKnownWebview(source)),
-      save: (content, requestId) => this.saveWebviewContent(content, requestId),
+      save: (content, requestId, source) =>
+        this.saveWebviewContent(content, requestId, this.asKnownWebview(source)),
       onHistoryEditApplied: () => {
         this.protectWebviewContentUntil = Date.now() + 750
       },
@@ -550,8 +551,8 @@ class DocumentSyncSession {
     this.webviewEditSequencer.enqueueEdit(content, revision, origin, source)
   }
 
-  enqueueSave(content: string, requestId?: number) {
-    this.webviewEditSequencer.enqueueSave(content, requestId)
+  enqueueSave(content: string, requestId?: number, source?: vscode.Webview) {
+    this.webviewEditSequencer.enqueueSave(content, requestId, source)
   }
 
   enqueueAcceptExternal() {
@@ -696,10 +697,10 @@ class DocumentSyncSession {
     }
   }
 
-  private async saveWebviewContent(content: string, requestId?: number) {
+  private async saveWebviewContent(content: string, requestId?: number, source?: vscode.Webview) {
     const reportSaveSuccess = (savedContent: string) => {
       this.baseContent = savedContent
-      this.broadcast({ type: 'save-success', requestId })
+      this.postSaveResponse(source, { type: 'save-success', requestId })
     }
 
     const doSave = async () => {
@@ -712,17 +713,17 @@ class DocumentSyncSession {
         if (saved || !this.document.isDirty) {
           reportSaveSuccess(contentBeforeSave)
         } else {
-          this.broadcast({ type: 'save-failed', requestId, reason: 'save' })
+          this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'save' })
         }
       } catch {
         this.isSaving = false
-        this.broadcast({ type: 'save-failed', requestId, reason: 'save' })
+        this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'save' })
       }
     }
 
     if (content !== this.document.getText()) {
       if (this.lastAppliedFromWebview !== content) {
-        this.broadcast({ type: 'save-failed', requestId, reason: 'stale-content' })
+        this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'stale-content' })
         return
       }
       this.suppressDocumentChange(content)
@@ -733,7 +734,7 @@ class DocumentSyncSession {
         await doSave()
       } else {
         this.unsuppressDocumentChange(content)
-        this.broadcast({ type: 'save-failed', requestId, reason: 'apply' })
+        this.postSaveResponse(source, { type: 'save-failed', requestId, reason: 'apply' })
       }
     } else {
       await doSave()
@@ -778,6 +779,14 @@ class DocumentSyncSession {
     for (const webview of this.webviews) {
       this.post(webview, message)
     }
+  }
+
+  private postSaveResponse(source: vscode.Webview | undefined, message: ExtensionToWebviewMessage) {
+    if (source && this.webviews.has(source)) {
+      this.post(source, message)
+      return
+    }
+    this.broadcast(message)
   }
 
   private asKnownWebview(source: unknown): vscode.Webview | undefined {

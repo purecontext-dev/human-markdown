@@ -534,28 +534,43 @@ const tests: IntegrationTest[] = [
       await clearWebviewMessages(uri, 0)
       await clearWebviewMessages(uri, 1)
 
-      await sendWebviewMessage(uri, { type: 'save', content: initial, requestId: 1201 }, 1)
+      await sendWebviewMessage(uri, { type: 'save', content: initial, requestId: 1 }, 1)
 
       await waitForWebviewMessage(
         uri,
         (message) => {
           return (
             message.type === 'save-failed' &&
-            message.requestId === 1201 &&
+            message.requestId === 1 &&
             message.reason === 'stale-content'
           )
         },
         1,
       )
       await settle()
+      const firstPanelMessages = await getWebviewMessages(uri, 0)
+      assert.equal(
+        firstPanelMessages.some(
+          (message) => message.type === 'save-failed' && message.requestId === 1,
+        ),
+        false,
+      )
       assert.equal(document.getText(), firstEdit)
       assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), initial)
 
-      await sendWebviewMessage(uri, { type: 'save', content: firstEdit, requestId: 1202 }, 0)
+      await sendWebviewMessage(uri, { type: 'save', content: firstEdit, requestId: 1 }, 0)
       await waitForWebviewMessage(
         uri,
-        (message) => message.type === 'save-success' && message.requestId === 1202,
+        (message) => message.type === 'save-success' && message.requestId === 1,
         0,
+      )
+      await settle()
+      const secondPanelMessages = await getWebviewMessages(uri, 1)
+      assert.equal(
+        secondPanelMessages.some(
+          (message) => message.type === 'save-success' && message.requestId === 1,
+        ),
+        false,
       )
       assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), firstEdit)
     },

@@ -75,6 +75,14 @@ describe('SaveController', () => {
     expect(dirty).toBe(true)
   })
 
+  it('handleFailure shows error for stale content save failures', () => {
+    ctrl.initiateSave()
+    ctrl.handleFailure(1, 'stale-content')
+    expect(showError).toHaveBeenCalledOnce()
+    expect(ctrl.pendingSaveContent).toBeNull()
+    expect(dirty).toBe(true)
+  })
+
   it('ignores stale save failures from earlier requests', () => {
     ctrl.initiateSave()
     content = 'v2'
