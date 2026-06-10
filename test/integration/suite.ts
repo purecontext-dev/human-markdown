@@ -752,6 +752,36 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'bare URLs preserve expected bytes when untouched',
+    run: async () => {
+      const initial = [
+        '# Bare URLs',
+        '',
+        'https://example.com/a*b',
+        '',
+        'See http://example.com/one_two and https://example.com/~user?q=a*b.',
+        '',
+      ].join('\n')
+      const uri = await writeWorkspaceFile('untouched-bare-urls.md', initial)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri)
+      const previewState = await waitForMilkdownReady(uri)
+      assert.equal(previewState.mode, 'preview')
+      assert.equal(previewState.content, initial)
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      const state = await reportWebviewState(uri)
+      assert.equal(await document.save(), true)
+
+      const disk = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+      assert.equal(state.mode, 'raw')
+      assert.equal(state.content, initial)
+      assert.equal(document.getText(), initial)
+      assert.equal(disk, initial)
+      assert.equal(document.isDirty, false)
+    },
+  },
+  {
     name: 'undo/redo in WYSIWYG updates document',
     run: async () => {
       const initial = '# WYSIWYG Undo\n\nOriginal content.\n'
@@ -971,6 +1001,10 @@ async function reportWebviewState(uri: vscode.Uri, sessionIndex?: number) {
     (event) => event.name === 'state' && event.requestId === requestId,
     sessionIndex,
   )
+}
+
+async function waitForMilkdownReady(uri: vscode.Uri, sessionIndex?: number) {
+  return await waitForWebviewState(uri, (event) => event.name === 'milkdown-ready', sessionIndex)
 }
 
 async function waitForReportedWebviewState(

@@ -1,5 +1,6 @@
 {
-  "plugin_version": "2.0.0",
+  "plugin_version": "2.0.1",
+  "version": 1,
   "gates": [
     {
       "id": "error-surfacing",

@@ -6,7 +6,12 @@ date: 2026-05-10
 
 # Plan Backlog
 
-No active plans.
+## Active Plan
+
+**editor-integration-test-roadmap** — Continue hardening the real VS Code
+Extension Host integration suite.
+
+Current batch: Batch 5, Round-Trip Fidelity In Real VS Code.
 
 ## Future Plans (not yet detailed)
 
