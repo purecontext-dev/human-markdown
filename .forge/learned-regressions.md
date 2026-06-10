@@ -93,3 +93,12 @@ When a pattern hits 3+ recurrences, Crucible proposes a rule update in `rule-upd
 - **Count:** 1
 - **Pattern:** `DOMParser.parseFromString` with XML MIME types (`image/svg+xml`, `application/xml`) does not throw on malformed input — it returns a document containing a `<parsererror>` element. Code that serializes `doc.documentElement.outerHTML` without checking for parseerror passes the error markup through to innerHTML or other sinks. Always check for `doc.querySelector('parsererror')` after XML DOMParser calls.
 - **Status:** active
+
+## production-exposed-webview-test-hooks
+- **First seen:** PR #104 — `webview/editor/index.ts:692-698` / `src/messages.ts:18-20` (round 1)
+- **Recurrences:** (none yet)
+- **Count:** 1
+- **Pattern:** Integration tests sometimes need a narrow host-to-webview command surface, but test-only webview messages are still part of the production bundle unless both the extension host command registration and the webview message handlers are explicitly gated. If those handlers run unconditionally, a production extension can accept synthetic test commands that mutate editor content or report internal state.
+- **Risk:** Production users, other extensions, or compromised webview code could invoke test-only mutation paths, bypassing normal UI constraints and exposing internal editor state.
+- **Mitigation:** Gate test command registration and webview test message handlers behind the same explicit test environment flag, and make test reporters no-op when the flag is absent.
+- **Status:** active
