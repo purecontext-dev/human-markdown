@@ -64,7 +64,8 @@ Prefer the sync controller extraction if it also simplifies production code.
 - [x] Untouched raw-to-rendered-to-raw round trip preserves bytes
 - [x] Undo/redo in WYSIWYG updates document
 - [x] Undo/redo in raw mode updates document
-- [x] Scroll/mode state restores after panel reload
+- [x] Mode state restores after panel reload
+- [ ] Scroll state restores after panel reload
 
 ## Batch 4: Multiple Panels
 

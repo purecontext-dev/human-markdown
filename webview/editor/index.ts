@@ -92,6 +92,7 @@ type ExtensionMessage =
   | { type: 'test-report-state'; requestId?: number }
 
 const vscode = acquireVsCodeApi()
+const testHooksEnabled = document.body.dataset.testHooks === 'true'
 
 let milkdownEditor: Editor | null = null
 let cmEditor: EditorView | null = null
@@ -535,14 +536,15 @@ function redoCurrentMode() {
   }
 }
 
-function reportTestState(requestId?: number) {
+function reportTestState(requestId?: number, name = 'state') {
+  if (!testHooksEnabled) return
   vscode.postMessage({
     type: 'test-event',
-    name: 'state',
+    name,
     requestId,
     content: getAuthoritativeContent(),
     mode: currentMode,
-    scrollTop: document.documentElement.scrollTop,
+    scrollTop: getPageScrollTop(),
   })
 }
 
@@ -597,13 +599,35 @@ const saveController = new SaveController({
 
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
+function getPageScrollTop(): number {
+  return document.scrollingElement?.scrollTop ?? document.documentElement.scrollTop
+}
+
 function saveScrollState() {
   if (scrollTimer) clearTimeout(scrollTimer)
   scrollTimer = setTimeout(() => {
-    const state: WebviewState = { scrollTop: document.documentElement.scrollTop, mode: currentMode }
+    const state: WebviewState = { scrollTop: getPageScrollTop(), mode: currentMode }
     vscode.setState(state)
     vscode.postMessage({ type: 'save-state', state })
   }, 150)
+}
+
+function restoreScrollTop(scrollTop: number) {
+  const started = Date.now()
+  const apply = () => {
+    const scrollingElement = document.scrollingElement
+    if (scrollingElement) {
+      scrollingElement.scrollTop = scrollTop
+    }
+    document.documentElement.scrollTop = scrollTop
+    document.body.scrollTop = scrollTop
+    window.scrollTo(0, scrollTop)
+    if (getPageScrollTop() !== scrollTop && Date.now() - started < 1000) {
+      requestAnimationFrame(apply)
+    }
+  }
+
+  apply()
 }
 
 window.addEventListener('message', (event) => {
@@ -623,10 +647,10 @@ window.addEventListener('message', (event) => {
       conflictBar.show()
       break
     case 'restore-state':
-      document.documentElement.scrollTop = msg.state.scrollTop
       if (msg.state.mode) {
         setMode(msg.state.mode)
       }
+      restoreScrollTop(msg.state.scrollTop)
       break
     case 'theme':
       applyTheme(msg.tokens, document.documentElement)

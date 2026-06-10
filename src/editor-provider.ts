@@ -451,7 +451,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   <title>Human Markdown</title>
   <link rel="stylesheet" href="${styleUri}">
 </head>
-<body data-host="${vscode.env.appName === 'Cursor' ? 'cursor' : 'vscode'}" style="--hm-zoom-compensation: ${zoomCompensation}; --hm-cm-font-family: ${escapeFontFamily(fontFamily)}; --hm-cm-font-size: ${fontSize}px; --hm-cm-line-height: ${lineHeight}px;">
+<body data-host="${vscode.env.appName === 'Cursor' ? 'cursor' : 'vscode'}" data-test-hooks="${process.env.HUMAN_MARKDOWN_TEST_HOOKS === '1' ? 'true' : 'false'}" style="--hm-zoom-compensation: ${zoomCompensation}; --hm-cm-font-family: ${escapeFontFamily(fontFamily)}; --hm-cm-font-size: ${fontSize}px; --hm-cm-line-height: ${lineHeight}px;">
   <div id="hm-banner">
     <span class="hm-banner-label">Human Markdown</span>
     <span class="hm-banner-hint" title="Cursor has its own markdown toggle in the tab bar. Use the button below to switch modes — Cursor's toggle will switch you out of Human Markdown.">Use the toggle below to switch modes</span>

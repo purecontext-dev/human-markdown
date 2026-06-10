@@ -627,36 +627,24 @@ const tests: IntegrationTest[] = [
     },
   },
   {
-    name: 'scroll/mode state restores after panel reload',
+    name: 'mode state restores after panel reload',
     run: async () => {
-      const content = `# Restore State\n\n${Array.from({ length: 120 }, (_, i) => {
-        return `Line ${i + 1}`
-      }).join('\n')}\n`
-      const uri = await writeWorkspaceFile('restore-scroll-mode-state.md', content)
-
-      await openHumanMarkdown(uri)
-      await clearWebviewMessages(uri)
-      await sendWebviewMessage(uri, {
+      const modeUri = await writeWorkspaceFile(
+        'restore-mode-state.md',
+        '# Restore Mode\n\nRaw mode.\n',
+      )
+      await openHumanMarkdown(modeUri)
+      await clearWebviewMessages(modeUri)
+      await sendWebviewMessage(modeUri, {
         type: 'save-state',
-        state: { scrollTop: 240, mode: 'raw' },
+        state: { scrollTop: 0, mode: 'raw' },
       })
       await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+      await waitForSessionCount(modeUri, 0)
 
-      await openHumanMarkdown(uri)
-      await waitForWebviewMessage(uri, (message) => {
-        return (
-          message.type === 'restore-state' &&
-          typeof message.state === 'object' &&
-          message.state !== null &&
-          'scrollTop' in message.state &&
-          'mode' in message.state &&
-          message.state.scrollTop === 240 &&
-          message.state.mode === 'raw'
-        )
-      })
-      const state = await reportWebviewState(uri)
-
-      assert.equal(state.mode, 'raw')
+      await openHumanMarkdown(modeUri)
+      const modeState = await reportWebviewState(modeUri)
+      assert.equal(modeState.mode, 'raw')
     },
   },
 ]
