@@ -500,7 +500,7 @@ class DocumentSyncSession {
     this.webviewEditSequencer = new WebviewEditSequencer({
       applyEdit: (content, source) => this.applyWebviewEdit(content, this.asKnownWebview(source)),
       save: (content, requestId, source) =>
-        this.saveWebviewContent(content, requestId, this.asKnownWebview(source)),
+        this.saveWebviewContent(content, requestId, source as vscode.Webview | undefined),
       onHistoryEditApplied: () => {
         this.protectWebviewContentUntil = Date.now() + 750
       },
@@ -782,8 +782,10 @@ class DocumentSyncSession {
   }
 
   private postSaveResponse(source: vscode.Webview | undefined, message: ExtensionToWebviewMessage) {
-    if (source && this.webviews.has(source)) {
-      this.post(source, message)
+    if (source) {
+      if (this.webviews.has(source)) {
+        this.post(source, message)
+      }
       return
     }
     this.broadcast(message)

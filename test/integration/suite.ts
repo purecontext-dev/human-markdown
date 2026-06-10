@@ -605,6 +605,40 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'closing a stale saving panel does not notify the remaining panel',
+    run: async () => {
+      const initial = '# Closed Save\n\nOriginal content.\n'
+      const firstEdit = '# Closed Save\n\nHeld edit from the first editor group.\n'
+      const uri = await writeWorkspaceFile('same-file-close-stale-saving-panel.md', initial)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+      await holdNextWebviewEdit(uri)
+      await sendWebviewMessage(uri, { type: 'edit', content: firstEdit, revision: 1 }, 0)
+      await waitForProviderState(uri, (state) => state.heldWebviewEditStarted === true)
+      await sendWebviewMessage(uri, { type: 'save', content: initial, requestId: 1 }, 1)
+
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor')
+      await waitForSessionCount(uri, 1)
+      await releaseHeldWebviewEdit(uri)
+
+      await waitForDocumentText(document, firstEdit)
+      await settle()
+      const remainingPanelMessages = await getWebviewMessages(uri, 0)
+      assert.equal(
+        remainingPanelMessages.some(
+          (message) => message.type === 'save-failed' && message.requestId === 1,
+        ),
+        false,
+      )
+      assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), initial)
+    },
+  },
+  {
     name: 'active webview routing sends commands to the selected panel',
     run: async () => {
       const uri = await writeWorkspaceFile(
