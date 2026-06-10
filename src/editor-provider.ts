@@ -721,6 +721,10 @@ class DocumentSyncSession {
     }
 
     if (content !== this.document.getText()) {
+      if (this.lastAppliedFromWebview !== content) {
+        this.broadcast({ type: 'save-failed', requestId, reason: 'stale-content' })
+        return
+      }
       this.suppressDocumentChange(content)
       const edit = new vscode.WorkspaceEdit()
       edit.replace(this.document.uri, this.fullDocumentRange(), content)

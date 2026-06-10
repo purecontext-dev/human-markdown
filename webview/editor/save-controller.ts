@@ -46,7 +46,7 @@ export class SaveController {
     this.rescheduleIfDirty(savedContent)
   }
 
-  handleFailure(requestId?: number, reason: 'apply' | 'save' = 'save') {
+  handleFailure(requestId?: number, reason: 'apply' | 'save' | 'stale-content' = 'save') {
     if (!this.isCurrentSaveResponse(requestId)) return
     const savedContent = this.pendingSaveContent
     this.pendingSaveContent = null

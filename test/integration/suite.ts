@@ -511,6 +511,116 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'two panels do not silently overwrite each other during save',
+    run: async () => {
+      const initial = '# Shared Save\n\nOriginal content.\n'
+      const firstEdit = '# Shared Save\n\nEdited from the first editor group.\n'
+      const uri = await writeWorkspaceFile('same-file-stale-peer-save.md', initial)
+      const document = await vscode.workspace.openTextDocument(uri)
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+
+      await sendWebviewMessage(uri, { type: 'edit', content: firstEdit, revision: 1 }, 0)
+      await waitForDocumentText(document, firstEdit)
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'update' && message.content === firstEdit,
+        1,
+      )
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+
+      await sendWebviewMessage(uri, { type: 'save', content: initial, requestId: 1201 }, 1)
+
+      await waitForWebviewMessage(
+        uri,
+        (message) => {
+          return (
+            message.type === 'save-failed' &&
+            message.requestId === 1201 &&
+            message.reason === 'stale-content'
+          )
+        },
+        1,
+      )
+      await settle()
+      assert.equal(document.getText(), firstEdit)
+      assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), initial)
+
+      await sendWebviewMessage(uri, { type: 'save', content: firstEdit, requestId: 1202 }, 0)
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'save-success' && message.requestId === 1202,
+        0,
+      )
+      assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), firstEdit)
+    },
+  },
+  {
+    name: 'closing one panel does not break sync for the other',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'same-file-close-one-panel.md',
+        '# Close One Panel\n\nOriginal content.\n',
+      )
+      const document = await vscode.workspace.openTextDocument(uri)
+      const edited = '# Close One Panel\n\nRemaining panel still edits.\n'
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor')
+      await waitForSessionCount(uri, 1)
+      await clearWebviewMessages(uri, 0)
+
+      await sendWebviewMessage(uri, { type: 'edit', content: edited, revision: 1 }, 0)
+      await waitForDocumentText(document, edited)
+      await sendWebviewMessage(uri, { type: 'save', content: edited, requestId: 1301 }, 0)
+
+      await waitForWebviewMessage(
+        uri,
+        (message) => message.type === 'save-success' && message.requestId === 1301,
+        0,
+      )
+      assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)), edited)
+    },
+  },
+  {
+    name: 'active webview routing sends commands to the selected panel',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'same-file-selected-panel-routing.md',
+        '# Selected Panel\n\nCommands should follow focus.\n',
+      )
+
+      await openHumanMarkdown(uri, vscode.ViewColumn.One)
+      await openHumanMarkdown(uri, vscode.ViewColumn.Beside)
+      await waitForSessionCount(uri, 2)
+      await vscode.commands.executeCommand('workbench.action.focusFirstEditorGroup')
+      await waitForActiveTabGroup(vscode.ViewColumn.One)
+      await clearWebviewMessages(uri, 0)
+      await clearWebviewMessages(uri, 1)
+
+      await vscode.commands.executeCommand('humanMarkdown.toggle')
+      await vscode.commands.executeCommand('humanMarkdown.find')
+
+      await waitForWebviewMessage(uri, (message) => message.type === 'toggle-mode', 0)
+      await waitForWebviewMessage(uri, (message) => message.type === 'show-find', 0)
+      await settle()
+      const inactiveMessages = await getWebviewMessages(uri, 1)
+      assert.equal(
+        inactiveMessages.some(
+          (message) => message.type === 'toggle-mode' || message.type === 'show-find',
+        ),
+        false,
+      )
+    },
+  },
+  {
     name: 'raw mode edit persists after toggling to rendered mode',
     run: async () => {
       const uri = await writeWorkspaceFile(
@@ -961,6 +1071,12 @@ async function waitForSessionCount(uri: vscode.Uri, expected: number): Promise<v
   await waitFor(async () => {
     return (await getSessionCount(uri)) === expected
   }, `Expected ${expected} webview sessions for ${uri.toString()}`)
+}
+
+async function waitForActiveTabGroup(viewColumn: vscode.ViewColumn): Promise<void> {
+  await waitFor(() => {
+    return vscode.window.tabGroups.activeTabGroup.viewColumn === viewColumn
+  }, `Expected active tab group to be ${viewColumn}`)
 }
 
 async function replaceDocument(document: vscode.TextDocument, content: string): Promise<void> {
