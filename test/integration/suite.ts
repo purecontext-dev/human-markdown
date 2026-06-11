@@ -891,6 +891,32 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'toolbar mode button toggles rendered and raw modes',
+    run: async () => {
+      const initial = '# Toolbar Mode\n\nClick the toolbar button.\n'
+      const uri = await writeWorkspaceFile('toolbar-mode-button-toggle.md', initial)
+
+      await openHumanMarkdown(uri)
+      await waitForMilkdownReady(uri)
+      const previewState = await reportWebviewState(uri)
+      assert.equal(previewState.mode, 'preview')
+      assert.equal(previewState.buttonMode, 'preview')
+      assert.equal(previewState.buttonLabel, 'View Source')
+
+      const rawState = await clickModeToggleButton(uri)
+      assert.equal(rawState.mode, 'raw')
+      assert.equal(rawState.content, initial)
+      assert.equal(rawState.buttonMode, 'raw')
+      assert.equal(rawState.buttonLabel, 'View Rendered')
+
+      const renderedState = await clickModeToggleButton(uri)
+      assert.equal(renderedState.mode, 'preview')
+      assert.equal(renderedState.content, initial)
+      assert.equal(renderedState.buttonMode, 'preview')
+      assert.equal(renderedState.buttonLabel, 'View Source')
+    },
+  },
+  {
     name: 'undo/redo in WYSIWYG updates document',
     run: async () => {
       const initial = '# WYSIWYG Undo\n\nOriginal content.\n'
@@ -1145,6 +1171,16 @@ async function insertPreviewParagraph(uri: vscode.Uri, text: string, sessionInde
     { type: 'test-insert-preview-paragraph', text, requestId },
     sessionIndex,
   )
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function clickModeToggleButton(uri: vscode.Uri, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-click-mode-toggle', requestId }, sessionIndex)
   return await waitForWebviewState(
     uri,
     (event) => event.name === 'state' && event.requestId === requestId,

@@ -89,6 +89,7 @@ type ExtensionMessage =
   | { type: 'redo' }
   | { type: 'test-set-raw-content'; content: string; requestId?: number }
   | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
+  | { type: 'test-click-mode-toggle'; requestId?: number }
   | { type: 'test-report-state'; requestId?: number }
 
 const vscode = acquireVsCodeApi()
@@ -555,6 +556,8 @@ function reportTestState(requestId?: number, name = 'state') {
     content: getAuthoritativeContent(),
     mode: currentMode,
     scrollTop: getPageScrollTop(),
+    buttonMode: modeToggleBtn.dataset.mode,
+    buttonLabel: modeToggleBtn.textContent ?? '',
   })
 }
 
@@ -595,6 +598,12 @@ function insertPreviewParagraphForTest(text: string, requestId?: number) {
   setDirty(true)
   postEdit(currentContent)
   saveController.scheduleAutoSave()
+  reportTestState(requestId)
+}
+
+function clickModeToggleForTest(requestId?: number) {
+  if (!testHooksEnabled) return
+  modeToggleBtn.click()
   reportTestState(requestId)
 }
 
@@ -711,6 +720,9 @@ window.addEventListener('message', (event) => {
       break
     case 'test-insert-preview-paragraph':
       insertPreviewParagraphForTest(msg.text, msg.requestId)
+      break
+    case 'test-click-mode-toggle':
+      clickModeToggleForTest(msg.requestId)
       break
     case 'test-report-state':
       reportTestState(msg.requestId)
