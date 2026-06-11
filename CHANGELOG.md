@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.3 - 2026-06-11
+## 0.5.4 - 2026-06-11
 
 ### Fixed
 - Multiple Human Markdown editor panes for the same file now share sync state,
