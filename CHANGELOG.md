@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.3 - 2026-06-11
+
+### Fixed
+- Multiple Human Markdown editor panes for the same file now share sync state,
+  preventing stale panes from silently overwriting newer edits.
+- External file changes now wait for queued editor edits before merging,
+  reducing race conditions during save/edit conflicts.
+- Conflict actions now run through the same sequenced edit path as normal editor
+  updates, preventing stale queued edits from reappearing after conflict
+  resolution.
+- Choosing "Keep Mine" now keeps the document dirty until the local version is
+  safely saved.
+- Source preservation is more reliable when documents contain duplicate
+  normalized blocks with different original markdown formatting.
+- Mode and scroll state restoration after editor reload is more reliable.
+
+### Improved
+- Added a real VS Code Extension Host integration suite covering document sync,
+  multiple editor panes, mode state, round-trip fidelity, and toolbar/autosave/
+  conflict/find/link/image smoke paths.
+- Updated development and publish dependencies, including Biome, VSCE, Open VSX
+  tooling, Shiki, KaTeX, and Milkdown patch releases.
+
 ## 0.5.2 - 2026-06-09
 
 ### Fixed
