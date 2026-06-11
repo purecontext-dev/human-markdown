@@ -711,6 +711,7 @@ function restoreScrollTop(scrollTop: number) {
 
 window.addEventListener('message', (event) => {
   const msg: ExtensionMessage = event.data
+  if (msg.type.startsWith('test-') && !testHooksEnabled) return
   switch (msg.type) {
     case 'update':
       if (milkdownEditor) {
