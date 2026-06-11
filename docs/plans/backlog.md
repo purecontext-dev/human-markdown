@@ -11,7 +11,7 @@ date: 2026-05-10
 **editor-integration-test-roadmap** — Continue hardening the real VS Code
 Extension Host integration suite.
 
-Current batch: Batch 5, Round-Trip Fidelity In Real VS Code.
+Current batch: Batch 6, UI Smoke Tests.
 
 ## Future Plans (not yet detailed)
 
