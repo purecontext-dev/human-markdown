@@ -61,7 +61,7 @@ each behavior before moving to the next item.
   - Likely files: `src/editor-provider.ts`, possible new sync controller module,
     provider lifecycle tests.
 
-- [ ] **Harden source splicing for duplicate normalized blocks**
+- [x] **Harden source splicing for duplicate normalized blocks**
   - `spliceContent` maps unchanged blocks through LCS over normalized block
     strings. Duplicate blocks that serialize identically but had different
     original bytes can map to the wrong disk block.

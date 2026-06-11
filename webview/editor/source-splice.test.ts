@@ -119,6 +119,44 @@ describe('spliceContent', () => {
     expect(result).not.toContain('*italic*')
   })
 
+  it('falls back when duplicate normalized blocks have different disk bytes', () => {
+    const disk = '_same_\n\n*same*\n\nEnd.\n'
+    const baseline = '*same*\n\n*same*\n\nEnd.\n'
+    const map = buildSourceMap(disk, baseline)
+
+    // Deleting one duplicate leaves a normalized block that LCS could map to
+    // either original disk block. Full live serialization is safer than
+    // preserving the wrong byte-for-byte source.
+    const live = '*same*\n\nEnd.\n'
+    const result = spliceContent(map, live)
+
+    expect(result).toBe(live)
+  })
+
+  it('preserves positional disk bytes when byte-specific duplicates all survive', () => {
+    const disk = '_same_\n\n*same*\n\nEnd.\n'
+    const baseline = '*same*\n\n*same*\n\nEnd.\n'
+    const map = buildSourceMap(disk, baseline)
+
+    const live = '*same*\n\n*same*\n\nEdited.\n'
+    const result = spliceContent(map, live)
+
+    expect(result).toBe('_same_\n\n*same*\n\nEdited.\n')
+  })
+
+  it('keeps splicing duplicate normalized blocks when disk bytes are identical', () => {
+    const disk = '*same*\n\n*same*\n\n_italic_\n'
+    const baseline = '*same*\n\n*same*\n\n*italic*\n'
+    const map = buildSourceMap(disk, baseline)
+
+    const live = '*same*\n\n*same*\n\nEdited.\n'
+    const result = spliceContent(map, live)
+
+    expect(result).toContain('*same*\n\n*same*')
+    expect(result).toContain('Edited.')
+    expect(result).not.toContain('*italic*')
+  })
+
   it('handles empty documents gracefully', () => {
     const disk = '\n'
     const baseline = '\n'
