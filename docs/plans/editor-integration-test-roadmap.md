@@ -77,12 +77,12 @@ Prefer the sync controller extraction if it also simplifies production code.
 ## Batch 5: Round-Trip Fidelity In Real VS Code
 
 - [x] Bare URLs preserve expected bytes when untouched
-- [ ] Tables do not drift when untouched
-- [ ] Lists preserve tight/loose behavior
-- [ ] Frontmatter survives open/toggle/save
-- [ ] Code fences survive open/toggle/save
-- [ ] GitHub alerts survive open/toggle/save
-- [ ] Math blocks survive open/toggle/save
+- [x] Tables do not drift when untouched
+- [x] Lists preserve tight/loose behavior
+- [x] Frontmatter survives open/toggle/save
+- [x] Code fences survive open/toggle/save
+- [x] GitHub alerts survive open/toggle/save
+- [x] Math blocks survive open/toggle/save
 
 ## Batch 6: UI Smoke Tests
 

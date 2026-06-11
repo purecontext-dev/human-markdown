@@ -762,23 +762,132 @@ const tests: IntegrationTest[] = [
         'See http://example.com/one_two and https://example.com/~user?q=a*b.',
         '',
       ].join('\n')
-      const uri = await writeWorkspaceFile('untouched-bare-urls.md', initial)
-      const document = await vscode.workspace.openTextDocument(uri)
-
-      await openHumanMarkdown(uri)
-      const previewState = await waitForMilkdownReady(uri)
-      assert.equal(previewState.mode, 'preview')
-      assert.equal(previewState.content, initial)
-      await vscode.commands.executeCommand('humanMarkdown.toggle')
-      const state = await reportWebviewState(uri)
-      assert.equal(await document.save(), true)
-
-      const disk = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
-      assert.equal(state.mode, 'raw')
-      assert.equal(state.content, initial)
-      assert.equal(document.getText(), initial)
-      assert.equal(disk, initial)
-      assert.equal(document.isDirty, false)
+      await assertUntouchedRoundTripPreservesBytes('untouched-bare-urls.md', initial)
+    },
+  },
+  {
+    name: 'tables do not drift when untouched',
+    run: async () => {
+      const initial = [
+        '# Tables',
+        '',
+        '| Name | Age | City |',
+        '| --- | --- | --- |',
+        '| Alice | 30 | NYC |',
+        '| Bob | 25 | LA |',
+        '',
+        '| Left | Center | Right |',
+        '| :--- | :---: | ---: |',
+        '| L1 | C1 | R1 |',
+        '| L2 | C2 | R2 |',
+        '',
+      ].join('\n')
+      await assertUntouchedRoundTripPreservesBytes('untouched-tables.md', initial)
+    },
+  },
+  {
+    name: 'lists preserve tight and loose behavior when untouched',
+    run: async () => {
+      const initial = [
+        '# Lists',
+        '',
+        '- Tight item one',
+        '- Tight item two',
+        '  - Tight nested A',
+        '  - Tight nested B',
+        '- Tight item three',
+        '',
+        '1. Loose first',
+        '',
+        '2. Loose second',
+        '',
+        '   Continued paragraph in the loose second item.',
+        '',
+        '3. Loose third',
+        '',
+        '- [ ] Unchecked task',
+        '- [x] Checked task',
+        '',
+      ].join('\n')
+      await assertUntouchedRoundTripPreservesBytes('untouched-lists.md', initial)
+    },
+  },
+  {
+    name: 'frontmatter survives open toggle save when untouched',
+    run: async () => {
+      const initial = [
+        '---',
+        'title: Round Trip',
+        'tags:',
+        '  - editor',
+        '  - integration',
+        'published: false',
+        '---',
+        '',
+        '# Frontmatter',
+        '',
+        'Body content stays below the metadata block.',
+        '',
+      ].join('\n')
+      await assertUntouchedRoundTripPreservesBytes('untouched-frontmatter.md', initial)
+    },
+  },
+  {
+    name: 'code fences survive open toggle save when untouched',
+    run: async () => {
+      const initial = [
+        '# Code Fences',
+        '',
+        'Inline `code` in a sentence.',
+        '',
+        '```javascript',
+        'function hello() {',
+        "  console.log('world')",
+        '}',
+        '```',
+        '',
+        '```',
+        'Plain code block with no language.',
+        '```',
+        '',
+      ].join('\n')
+      await assertUntouchedRoundTripPreservesBytes('untouched-code-fences.md', initial)
+    },
+  },
+  {
+    name: 'GitHub alerts survive open toggle save when untouched',
+    run: async () => {
+      const initial = [
+        '# GitHub Alerts',
+        '',
+        '> [!NOTE]',
+        '> Useful context with `inline code`.',
+        '',
+        '> [!WARNING]',
+        '> First warning paragraph.',
+        '>',
+        '> Second warning paragraph with **strong text**.',
+        '',
+      ].join('\n')
+      await assertUntouchedRoundTripPreservesBytes('untouched-github-alerts.md', initial)
+    },
+  },
+  {
+    name: 'math blocks survive open toggle save when untouched',
+    run: async () => {
+      const initial = [
+        '# Math',
+        '',
+        'Euler says $e^{i\\pi} + 1 = 0$ in prose.',
+        '',
+        '$$',
+        'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}',
+        '$$',
+        '',
+        'Inline math like $\\alpha + \\beta = \\gamma$ survives too.',
+        '',
+      ].join('\n')
+      await assertUntouchedRoundTripPreservesBytes('untouched-math.md', initial)
     },
   },
   {
@@ -1088,6 +1197,30 @@ async function assertCommandRoutesToActiveEditor(
     inactiveMessages.some((message) => message.type === expectedMessageType),
     false,
   )
+}
+
+async function assertUntouchedRoundTripPreservesBytes(
+  filename: string,
+  initial: string,
+): Promise<void> {
+  const uri = await writeWorkspaceFile(filename, initial)
+  const document = await vscode.workspace.openTextDocument(uri)
+
+  await openHumanMarkdown(uri)
+  const previewState = await waitForMilkdownReady(uri)
+  assert.equal(previewState.mode, 'preview')
+  assert.equal(previewState.content, initial)
+
+  await vscode.commands.executeCommand('humanMarkdown.toggle')
+  const rawState = await reportWebviewState(uri)
+  assert.equal(await document.save(), true)
+
+  const disk = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+  assert.equal(rawState.mode, 'raw')
+  assert.equal(rawState.content, initial)
+  assert.equal(document.getText(), initial)
+  assert.equal(disk, initial)
+  assert.equal(document.isDirty, false)
 }
 
 async function openHumanMarkdown(uri: vscode.Uri, viewColumn?: vscode.ViewColumn): Promise<void> {
