@@ -1,5 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runTests } from '@vscode/test-electron'
@@ -7,7 +6,12 @@ import { runTests } from '@vscode/test-electron'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const extensionDevelopmentPath = path.resolve(__dirname, '..')
 const extensionTestsPath = path.resolve(extensionDevelopmentPath, 'dist', 'integration', 'suite.js')
-const workspacePath = mkdtempSync(path.join(tmpdir(), 'human-markdown-integration-'))
+const tempRoot = mkdtempSync('/tmp/hm-it-')
+const workspacePath = path.join(tempRoot, 'workspace')
+const userDataPath = path.join(tempRoot, 'user-data')
+const extensionsPath = path.join(tempRoot, 'extensions')
+
+mkdirSync(workspacePath)
 
 try {
   await runTests({
@@ -16,8 +20,12 @@ try {
     extensionTestsEnv: {
       HUMAN_MARKDOWN_TEST_HOOKS: '1',
     },
-    launchArgs: [workspacePath],
+    launchArgs: [
+      workspacePath,
+      `--user-data-dir=${userDataPath}`,
+      `--extensions-dir=${extensionsPath}`,
+    ],
   })
 } finally {
-  rmSync(workspacePath, { recursive: true, force: true })
+  rmSync(tempRoot, { recursive: true, force: true })
 }

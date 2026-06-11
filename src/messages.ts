@@ -17,6 +17,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'redo' }
   | { type: 'test-set-raw-content'; content: string; requestId?: number }
   | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
+  | { type: 'test-click-mode-toggle'; requestId?: number }
   | { type: 'test-report-state'; requestId?: number }
 
 export type WebviewToExtensionMessage =
@@ -37,6 +38,8 @@ export type WebviewToExtensionMessage =
       content?: string
       mode?: 'preview' | 'raw'
       scrollTop?: number
+      buttonMode?: string
+      buttonLabel?: string
     }
 
 export interface WebviewState {

@@ -89,7 +89,7 @@ Prefer the sync controller extraction if it also simplifies production code.
 These may need an Electron UI driver such as Playwright in addition to
 `@vscode/test-electron`.
 
-- [ ] Toolbar mode button toggles rendered/raw
+- [x] Toolbar mode button toggles rendered/raw
 - [ ] Autosave toggle persists setting and saves after edit
 - [ ] Conflict bar buttons work
 - [ ] Find bar displays and navigates results
