@@ -133,6 +133,17 @@ describe('spliceContent', () => {
     expect(result).toBe(live)
   })
 
+  it('falls back when byte-specific duplicate positions shift after insertion', () => {
+    const disk = '_same_\n\n*same*\n\nEnd.\n'
+    const baseline = '*same*\n\n*same*\n\nEnd.\n'
+    const map = buildSourceMap(disk, baseline)
+
+    const live = '*same*\n\nChanged first original.\n\n*same*\n\nEnd.\n'
+    const result = spliceContent(map, live)
+
+    expect(result).toBe(live)
+  })
+
   it('preserves positional disk bytes when byte-specific duplicates all survive', () => {
     const disk = '_same_\n\n*same*\n\nEnd.\n'
     const baseline = '*same*\n\n*same*\n\nEnd.\n'

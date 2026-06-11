@@ -157,7 +157,7 @@ function hasAmbiguousDuplicateMatches(
     }
 
     for (let i = 0; i < indexes.length; i++) {
-      if (!matchPairs.has(`${indexes[i]}:${liveIndexes[i]}`)) {
+      if (liveIndexes[i] !== indexes[i] || !matchPairs.has(`${indexes[i]}:${liveIndexes[i]}`)) {
         return true
       }
     }
