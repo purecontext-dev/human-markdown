@@ -8,10 +8,7 @@ date: 2026-05-10
 
 ## Active Plan
 
-**editor-integration-test-roadmap** — Continue hardening the real VS Code
-Extension Host integration suite.
-
-Current batch: Batch 6, UI Smoke Tests.
+No active detailed plan selected.
 
 ## Future Plans (not yet detailed)
 

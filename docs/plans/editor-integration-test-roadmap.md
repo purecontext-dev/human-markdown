@@ -90,12 +90,12 @@ These may need an Electron UI driver such as Playwright in addition to
 `@vscode/test-electron`.
 
 - [x] Toolbar mode button toggles rendered/raw
-- [ ] Autosave toggle persists setting and saves after edit
-- [ ] Conflict bar buttons work
-- [ ] Find bar displays and navigates results
-- [ ] Image path resolution renders safe local images
-- [ ] Unsafe image paths outside the document directory do not resolve
-- [ ] External links and relative links dispatch correctly
+- [x] Autosave toggle persists setting and saves after edit
+- [x] Conflict bar buttons work
+- [x] Find bar displays and navigates results
+- [x] Image path resolution renders safe local images
+- [x] Unsafe image paths outside the document directory do not resolve
+- [x] External links and relative links dispatch correctly
 
 ## Done Criteria Per Batch
 

@@ -18,6 +18,12 @@ export type ExtensionToWebviewMessage =
   | { type: 'test-set-raw-content'; content: string; requestId?: number }
   | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
   | { type: 'test-click-mode-toggle'; requestId?: number }
+  | { type: 'test-click-autosave-toggle'; requestId?: number }
+  | { type: 'test-click-conflict-action'; action: 'accept' | 'keep'; requestId?: number }
+  | { type: 'test-set-find-query'; query: string; requestId?: number }
+  | { type: 'test-find-next'; requestId?: number }
+  | { type: 'test-find-prev'; requestId?: number }
+  | { type: 'test-click-link'; href: string; requestId?: number }
   | { type: 'test-report-state'; requestId?: number }
 
 export type WebviewToExtensionMessage =
@@ -40,6 +46,18 @@ export type WebviewToExtensionMessage =
       scrollTop?: number
       buttonMode?: string
       buttonLabel?: string
+      autosaveChecked?: boolean
+      autoSaveEnabled?: boolean
+      dirty?: boolean
+      conflictVisible?: boolean
+      findVisible?: boolean
+      findValue?: string
+      findCount?: string
+      imageSrc?: string | null
+      imageAlt?: string | null
+      imageLoading?: boolean
+      imageBroken?: boolean
+      linkHrefs?: string[]
     }
 
 export interface WebviewState {

@@ -917,6 +917,202 @@ const tests: IntegrationTest[] = [
     },
   },
   {
+    name: 'autosave toggle persists setting and saves after edit',
+    run: async () => {
+      const initial = '# Autosave\n\nOriginal content.\n'
+      const uri = await writeWorkspaceFile('autosave-toggle-save.md', initial)
+      const document = await vscode.workspace.openTextDocument(uri)
+      const config = vscode.workspace.getConfiguration('humanMarkdown')
+      const originalAutoSave = config.inspect<boolean>('autoSave')?.globalValue
+
+      try {
+        await config.update('autoSave', false, vscode.ConfigurationTarget.Global)
+
+        await openHumanMarkdown(uri)
+        await waitForMilkdownReady(uri)
+        const initialState = await reportWebviewState(uri)
+        assert.equal(initialState.autosaveChecked, false)
+        assert.equal(initialState.autoSaveEnabled, false)
+
+        await clearWebviewMessages(uri)
+        const toggledState = await clickAutosaveToggle(uri)
+        assert.equal(toggledState.autosaveChecked, true)
+        assert.equal(toggledState.autoSaveEnabled, true)
+
+        await waitFor(
+          () => vscode.workspace.getConfiguration('humanMarkdown').get<boolean>('autoSave', false),
+          'Expected autosave setting to persist after toolbar toggle',
+        )
+        await waitForWebviewMessage(uri, (message) => {
+          return message.type === 'auto-save' && message.enabled === true
+        })
+
+        await clearWebviewMessages(uri)
+        const editedState = await insertPreviewParagraph(uri, 'Autosaved paragraph.')
+        const editedContent = String(editedState.content)
+
+        await waitForDocumentText(document, editedContent)
+        await waitForWebviewMessage(uri, (message) => message.type === 'save-success')
+        await waitFor(async () => {
+          const diskContent = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+          return diskContent === editedContent
+        }, 'Expected autosave to write edited content to disk')
+        assert.equal(document.isDirty, false)
+      } finally {
+        await config.update('autoSave', originalAutoSave, vscode.ConfigurationTarget.Global)
+      }
+    },
+  },
+  {
+    name: 'conflict bar buttons resolve external changes',
+    run: async () => {
+      const acceptUri = await writeWorkspaceFile('conflict-bar-accept.md', 'A\nB\nC\n')
+      const acceptDocument = await vscode.workspace.openTextDocument(acceptUri)
+      await createConflictFromWebview(
+        acceptUri,
+        acceptDocument,
+        'A\nlocal\nC\n',
+        'A\nexternal\nC\n',
+      )
+
+      const visibleState = await reportWebviewState(acceptUri)
+      assert.equal(visibleState.conflictVisible, true)
+
+      const acceptedState = await clickConflictAction(acceptUri, 'accept')
+      assert.equal(acceptedState.conflictVisible, false)
+      await waitForDocumentText(acceptDocument, 'A\nexternal\nC\n')
+
+      const keepUri = await writeWorkspaceFile('conflict-bar-keep.md', 'A\nB\nC\n')
+      const keepDocument = await vscode.workspace.openTextDocument(keepUri)
+      await createConflictFromWebview(keepUri, keepDocument, 'A\nlocal\nC\n', 'A\nexternal\nC\n')
+
+      const keptState = await clickConflictAction(keepUri, 'keep')
+      assert.equal(keptState.conflictVisible, false)
+      await waitForDocumentText(keepDocument, 'A\nlocal\nC\n')
+      await waitForProviderState(keepUri, (state) => state.webviewIsDirty === true)
+    },
+  },
+  {
+    name: 'find bar displays and navigates results',
+    run: async () => {
+      const initial = '# Find\n\nNeedle one.\n\nNeedle two.\n\nNeedle three.\n'
+      const uri = await writeWorkspaceFile('find-bar-navigation.md', initial)
+
+      await openHumanMarkdown(uri)
+      await waitForMilkdownReady(uri)
+
+      const firstMatch = await setFindQuery(uri, 'Needle')
+      assert.equal(firstMatch.findVisible, true)
+      assert.equal(firstMatch.findValue, 'Needle')
+      assert.equal(firstMatch.findCount, '1 of 3')
+
+      const secondMatch = await findNext(uri)
+      assert.equal(secondMatch.findCount, '2 of 3')
+
+      const backToFirst = await findPrev(uri)
+      assert.equal(backToFirst.findCount, '1 of 3')
+
+      const noResults = await setFindQuery(uri, 'missing')
+      assert.equal(noResults.findCount, 'No results')
+    },
+  },
+  {
+    name: 'image path resolution renders safe local images',
+    run: async () => {
+      const folder = vscode.workspace.workspaceFolders?.[0]
+      assert.ok(folder, 'Expected integration test workspace folder')
+      await vscode.workspace.fs.writeFile(
+        vscode.Uri.joinPath(folder.uri, 'safe-image.png'),
+        tinyPngBytes(),
+      )
+      const uri = await writeWorkspaceFile(
+        'safe-image-render.md',
+        '# Image\n\n![Safe image](safe-image.png)\n',
+      )
+
+      await openHumanMarkdown(uri)
+      await waitForMilkdownReady(uri)
+      await waitForWebviewMessage(uri, (message) => {
+        return message.type === 'image-uri-resolved' && message.src === 'safe-image.png'
+      })
+      const imageState = await waitForReportedWebviewState(uri, (state) => {
+        return typeof state.imageSrc === 'string' && state.imageSrc.length > 0
+      })
+
+      assert.equal(imageState.imageAlt, 'Safe image')
+      assert.equal(imageState.imageLoading, false)
+      assert.equal(imageState.imageBroken, false)
+    },
+  },
+  {
+    name: 'unsafe image paths outside the document directory do not resolve',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'unsafe-image-render.md',
+        '# Unsafe Image\n\n![Outside](../outside.png)\n',
+      )
+
+      await openHumanMarkdown(uri)
+      await waitForMilkdownReady(uri)
+      await settle()
+
+      const messages = await getWebviewMessages(uri)
+      assert.equal(
+        messages.some((message) => {
+          return message.type === 'image-uri-resolved' && message.src === '../outside.png'
+        }),
+        false,
+      )
+      const imageState = await reportWebviewState(uri)
+      assert.equal(imageState.imageAlt, 'Outside')
+      assert.equal(imageState.imageSrc, null)
+    },
+  },
+  {
+    name: 'external links and relative links dispatch correctly',
+    run: async () => {
+      const uri = await writeWorkspaceFile(
+        'link-dispatch.md',
+        [
+          '# Links',
+          '',
+          '[External](https://example.com/docs)',
+          '[Relative](target.md)',
+          '[Section](#local-heading)',
+          '',
+        ].join('\n'),
+      )
+
+      await openHumanMarkdown(uri)
+      await waitForMilkdownReady(uri)
+      const linkState = await reportWebviewState(uri)
+      assert.deepEqual(linkState.linkHrefs, [
+        'https://example.com/docs',
+        'target.md',
+        '#local-heading',
+      ])
+
+      await clearActions(uri)
+      await clickLink(uri, 'https://example.com/docs')
+      const externalAction = await waitForAction(uri, (action) => {
+        return action.type === 'open-external' && action.href === 'https://example.com/docs'
+      })
+      assert.equal(externalAction.href, 'https://example.com/docs')
+
+      await clearActions(uri)
+      await clickLink(uri, 'target.md')
+      const relativeAction = await waitForAction(uri, (action) => {
+        return action.type === 'open-relative' && action.href === 'target.md'
+      })
+      assert.match(String(relativeAction.uri), /target\.md$/)
+
+      await clearActions(uri)
+      await clickLink(uri, '#local-heading')
+      await settle()
+      assert.deepEqual(await getActions(uri), [])
+    },
+  },
+  {
     name: 'undo/redo in WYSIWYG updates document',
     run: async () => {
       const initial = '# WYSIWYG Undo\n\nOriginal content.\n'
@@ -1091,6 +1287,17 @@ async function getWebviewEvents(
   )
 }
 
+async function getActions(
+  uri: vscode.Uri,
+  sessionIndex?: number,
+): Promise<Array<Record<string, unknown>>> {
+  return await vscode.commands.executeCommand(
+    'humanMarkdown.test.actions',
+    uri.toString(),
+    sessionIndex,
+  )
+}
+
 async function getProviderState(
   uri: vscode.Uri,
   sessionIndex?: number,
@@ -1113,6 +1320,14 @@ async function clearWebviewMessages(uri: vscode.Uri, sessionIndex?: number): Pro
 async function clearWebviewEvents(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
   await vscode.commands.executeCommand(
     'humanMarkdown.test.clearWebviewEvents',
+    uri.toString(),
+    sessionIndex,
+  )
+}
+
+async function clearActions(uri: vscode.Uri, sessionIndex?: number): Promise<void> {
+  await vscode.commands.executeCommand(
+    'humanMarkdown.test.clearActions',
     uri.toString(),
     sessionIndex,
   )
@@ -1181,6 +1396,74 @@ async function insertPreviewParagraph(uri: vscode.Uri, text: string, sessionInde
 async function clickModeToggleButton(uri: vscode.Uri, sessionIndex?: number) {
   const requestId = nextRequestId++
   await postWebviewMessage(uri, { type: 'test-click-mode-toggle', requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function clickAutosaveToggle(uri: vscode.Uri, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-click-autosave-toggle', requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function clickConflictAction(
+  uri: vscode.Uri,
+  action: 'accept' | 'keep',
+  sessionIndex?: number,
+) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(
+    uri,
+    { type: 'test-click-conflict-action', action, requestId },
+    sessionIndex,
+  )
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function setFindQuery(uri: vscode.Uri, query: string, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-set-find-query', query, requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function findNext(uri: vscode.Uri, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-find-next', requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function findPrev(uri: vscode.Uri, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-find-prev', requestId }, sessionIndex)
+  return await waitForWebviewState(
+    uri,
+    (event) => event.name === 'state' && event.requestId === requestId,
+    sessionIndex,
+  )
+}
+
+async function clickLink(uri: vscode.Uri, href: string, sessionIndex?: number) {
+  const requestId = nextRequestId++
+  await postWebviewMessage(uri, { type: 'test-click-link', href, requestId }, sessionIndex)
   return await waitForWebviewState(
     uri,
     (event) => event.name === 'state' && event.requestId === requestId,
@@ -1312,6 +1595,22 @@ async function createConflict(
   await waitForWebviewMessage(uri, (message) => message.type === 'external-change')
 }
 
+async function createConflictFromWebview(
+  uri: vscode.Uri,
+  document: vscode.TextDocument,
+  local: string,
+  external: string,
+): Promise<void> {
+  await openHumanMarkdown(uri)
+  await clearWebviewMessages(uri)
+  await setRawContent(uri, local)
+  await waitForDocumentText(document, local)
+  await waitForProviderState(uri, (state) => state.webviewIsDirty === true)
+  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(external))
+  await replaceDocument(document, external)
+  await waitForWebviewMessage(uri, (message) => message.type === 'external-change')
+}
+
 async function waitForProviderState(
   uri: vscode.Uri,
   predicate: (state: Record<string, unknown>) => boolean,
@@ -1321,6 +1620,21 @@ async function waitForProviderState(
     const state = await getProviderState(uri, sessionIndex)
     return predicate(state)
   }, `Expected matching provider state for ${uri.toString()}`)
+}
+
+async function waitForAction(
+  uri: vscode.Uri,
+  predicate: (action: Record<string, unknown>) => boolean,
+  sessionIndex?: number,
+): Promise<Record<string, unknown>> {
+  let matched: Record<string, unknown> | undefined
+  await waitFor(async () => {
+    const actions = await getActions(uri, sessionIndex)
+    matched = actions.find(predicate)
+    return matched !== undefined
+  }, `Expected matching test action for ${uri.toString()}`)
+  assert.ok(matched)
+  return matched
 }
 
 async function waitForSessionCount(uri: vscode.Uri, expected: number): Promise<void> {
@@ -1364,6 +1678,16 @@ async function waitForDocumentTextContaining(
 
 async function settle(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 100))
+}
+
+function tinyPngBytes(): Uint8Array {
+  return Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+    0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+    0x42, 0x60, 0x82,
+  ])
 }
 
 async function waitForCustomEditor(uri: vscode.Uri, viewType: string): Promise<void> {

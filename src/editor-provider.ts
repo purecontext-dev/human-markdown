@@ -12,9 +12,11 @@ interface TestSession {
   postMessage: (msg: ExtensionToWebviewMessage) => void
   getMessages: () => ExtensionToWebviewMessage[]
   getWebviewEvents: () => WebviewToExtensionMessage[]
+  getActions: () => Record<string, unknown>[]
   getState: () => Record<string, unknown>
   clearMessages: () => void
   clearWebviewEvents: () => void
+  clearActions: () => void
   holdNextWebviewEdit: () => void
   releaseHeldWebviewEdit: () => void
 }
@@ -150,6 +152,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     let onMessageReceived: (msg: WebviewToExtensionMessage) => void = () => {}
     const sessionMessages: ExtensionToWebviewMessage[] = []
     const webviewEvents: WebviewToExtensionMessage[] = []
+    const testActions: Record<string, unknown>[] = []
     const documentKey = document.uri.toString()
     const testSession: TestSession = {
       uri: document.uri,
@@ -157,12 +160,16 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       postMessage: (msg) => this.postMessage(webview, msg),
       getMessages: () => [...sessionMessages],
       getWebviewEvents: () => [...webviewEvents],
+      getActions: () => [...testActions],
       getState: () => syncSession.getTestState(),
       clearMessages: () => {
         sessionMessages.length = 0
       },
       clearWebviewEvents: () => {
         webviewEvents.length = 0
+      },
+      clearActions: () => {
+        testActions.length = 0
       },
       holdNextWebviewEdit: () => {
         syncSession.holdNextWebviewEdit()
@@ -229,10 +236,18 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         case 'open-link': {
           const href = msg.href
           if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+            if (process.env.HUMAN_MARKDOWN_TEST_HOOKS === '1') {
+              testActions.push({ type: 'open-external', href })
+              break
+            }
             vscode.env.openExternal(vscode.Uri.parse(href))
           } else if (!href.startsWith('#')) {
             const docDir = vscode.Uri.joinPath(document.uri, '..')
             const targetUri = vscode.Uri.joinPath(docDir, href)
+            if (process.env.HUMAN_MARKDOWN_TEST_HOOKS === '1') {
+              testActions.push({ type: 'open-relative', href, uri: targetUri.toString() })
+              break
+            }
             vscode.commands.executeCommand('vscode.open', targetUri)
           }
           break
@@ -353,6 +368,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         },
       ),
       vscode.commands.registerCommand(
+        'humanMarkdown.test.actions',
+        (uriString: string, sessionIndex?: number) => {
+          return this.getTestSession(uriString, sessionIndex)?.getActions() ?? []
+        },
+      ),
+      vscode.commands.registerCommand(
         'humanMarkdown.test.state',
         (uriString: string, sessionIndex?: number) => {
           return this.getTestSession(uriString, sessionIndex)?.getState() ?? {}
@@ -368,6 +389,12 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         'humanMarkdown.test.clearWebviewEvents',
         (uriString: string, sessionIndex?: number) => {
           this.getTestSession(uriString, sessionIndex)?.clearWebviewEvents()
+        },
+      ),
+      vscode.commands.registerCommand(
+        'humanMarkdown.test.clearActions',
+        (uriString: string, sessionIndex?: number) => {
+          this.getTestSession(uriString, sessionIndex)?.clearActions()
         },
       ),
       vscode.commands.registerCommand(

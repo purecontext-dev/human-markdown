@@ -6,6 +6,14 @@ date: 2026-05-10
 
 # Shipped Plans
 
+## Editor Integration Test Roadmap (shipped 2026-06-11)
+
+Real VS Code Extension Host integration suite covering document sync, editor
+state, multiple panels, round-trip fidelity, and UI smoke paths. Batches 1-6 are
+complete: sync risk spine, core extension host behavior, mode/editor state,
+multiple panels, round-trip fidelity in real VS Code, and toolbar/autosave/
+conflict/find/image/link UI smoke tests.
+
 ## In-Place Mode Toggle (shipped 2026-05-11)
 
 CodeMirror raw editor embedded in the same webview as Milkdown WYSIWYG. Preview/Markdown toggle buttons in toolbar, Cmd+Shift+V keybinding. Extension owns .md files by default. Zoom compensation, font-family matching with generic fallback, syntax highlighting with VSCode-matching colors.

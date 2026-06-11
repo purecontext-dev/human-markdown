@@ -90,6 +90,12 @@ type ExtensionMessage =
   | { type: 'test-set-raw-content'; content: string; requestId?: number }
   | { type: 'test-insert-preview-paragraph'; text: string; requestId?: number }
   | { type: 'test-click-mode-toggle'; requestId?: number }
+  | { type: 'test-click-autosave-toggle'; requestId?: number }
+  | { type: 'test-click-conflict-action'; action: 'accept' | 'keep'; requestId?: number }
+  | { type: 'test-set-find-query'; query: string; requestId?: number }
+  | { type: 'test-find-next'; requestId?: number }
+  | { type: 'test-find-prev'; requestId?: number }
+  | { type: 'test-click-link'; href: string; requestId?: number }
   | { type: 'test-report-state'; requestId?: number }
 
 const vscode = acquireVsCodeApi()
@@ -549,6 +555,8 @@ function redoCurrentMode() {
 
 function reportTestState(requestId?: number, name = 'state') {
   if (!testHooksEnabled) return
+  const firstImage = previewContainer.querySelector('img')
+  const findState = findBar.state
   vscode.postMessage({
     type: 'test-event',
     name,
@@ -558,6 +566,20 @@ function reportTestState(requestId?: number, name = 'state') {
     scrollTop: getPageScrollTop(),
     buttonMode: modeToggleBtn.dataset.mode,
     buttonLabel: modeToggleBtn.textContent ?? '',
+    autosaveChecked: autosaveCheckbox.checked,
+    autoSaveEnabled: saveController.isAutoSaveEnabled,
+    dirty: webviewDirty,
+    conflictVisible: conflictBar.isVisible,
+    findVisible: findState.visible,
+    findValue: findState.value,
+    findCount: findState.count,
+    imageSrc: firstImage?.getAttribute('src') ?? null,
+    imageAlt: firstImage?.getAttribute('alt') ?? null,
+    imageLoading: firstImage?.classList.contains('image-loading') ?? false,
+    imageBroken: firstImage?.classList.contains('image-broken') ?? false,
+    linkHrefs: Array.from(previewContainer.querySelectorAll('a')).map((link) => {
+      return link.getAttribute('href') ?? ''
+    }),
   })
 }
 
@@ -604,6 +626,37 @@ function insertPreviewParagraphForTest(text: string, requestId?: number) {
 function clickModeToggleForTest(requestId?: number) {
   if (!testHooksEnabled) return
   modeToggleBtn.click()
+  reportTestState(requestId)
+}
+
+function clickAutosaveToggleForTest(requestId?: number) {
+  if (!testHooksEnabled) return
+  autosaveCheckbox.click()
+  reportTestState(requestId)
+}
+
+function clickConflictActionForTest(action: 'accept' | 'keep', requestId?: number) {
+  if (!testHooksEnabled) return
+  const button = document.querySelector<HTMLButtonElement>(`.conflict-btn.${action}`)
+  button?.click()
+  reportTestState(requestId)
+}
+
+function setFindQueryForTest(query: string, requestId?: number) {
+  if (!testHooksEnabled) return
+  findBar.show()
+  findBar.setQueryForTest(query)
+  reportTestState(requestId)
+}
+
+function clickLinkForTest(href: string, requestId?: number) {
+  if (!testHooksEnabled) return
+  const link = Array.from(previewContainer.querySelectorAll<HTMLAnchorElement>('a')).find(
+    (item) => {
+      return item.getAttribute('href') === href
+    },
+  )
+  link?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true }))
   reportTestState(requestId)
 }
 
@@ -658,6 +711,7 @@ function restoreScrollTop(scrollTop: number) {
 
 window.addEventListener('message', (event) => {
   const msg: ExtensionMessage = event.data
+  if (msg.type.startsWith('test-') && !testHooksEnabled) return
   switch (msg.type) {
     case 'update':
       if (milkdownEditor) {
@@ -723,6 +777,26 @@ window.addEventListener('message', (event) => {
       break
     case 'test-click-mode-toggle':
       clickModeToggleForTest(msg.requestId)
+      break
+    case 'test-click-autosave-toggle':
+      clickAutosaveToggleForTest(msg.requestId)
+      break
+    case 'test-click-conflict-action':
+      clickConflictActionForTest(msg.action, msg.requestId)
+      break
+    case 'test-set-find-query':
+      setFindQueryForTest(msg.query, msg.requestId)
+      break
+    case 'test-find-next':
+      findBar.next()
+      reportTestState(msg.requestId)
+      break
+    case 'test-find-prev':
+      findBar.prev()
+      reportTestState(msg.requestId)
+      break
+    case 'test-click-link':
+      clickLinkForTest(msg.href, msg.requestId)
       break
     case 'test-report-state':
       reportTestState(msg.requestId)
