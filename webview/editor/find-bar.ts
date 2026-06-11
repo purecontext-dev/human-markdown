@@ -146,6 +146,19 @@ export class FindBar {
     return !this.el.classList.contains('hidden')
   }
 
+  get state() {
+    return {
+      visible: this.isVisible,
+      value: this.input.value,
+      count: this.countLabel.textContent,
+    }
+  }
+
+  setQueryForTest(query: string) {
+    this.input.value = query
+    this.search()
+  }
+
   refresh() {
     if (this.isVisible && this.input.value) this.search()
   }
