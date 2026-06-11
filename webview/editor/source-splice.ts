@@ -32,6 +32,10 @@ export function spliceContent(sourceMap: SourceMap, liveSerialized: string): str
     return liveSerialized
   }
 
+  if (hasAmbiguousDuplicateMatches(sourceMap, liveBlocks, matches)) {
+    return liveSerialized
+  }
+
   const result: string[] = []
   let liveIdx = 0
 
@@ -110,6 +114,56 @@ function canSplice(sourceMap: SourceMap): boolean {
   // be valid. If the parse normalized the block count (e.g. setext headings
   // collapse two source lines into one block), the correspondence is broken.
   return sourceMap.diskBlocks.length === sourceMap.baselineBlocks.length
+}
+
+function hasAmbiguousDuplicateMatches(
+  sourceMap: SourceMap,
+  liveBlocks: string[],
+  matches: [number, number][],
+): boolean {
+  const baselineIndexes = new Map<string, number[]>()
+  const diskBytesByBaseline = new Map<string, Set<string>>()
+
+  for (let i = 0; i < sourceMap.baselineBlocks.length; i++) {
+    const baselineBlock = sourceMap.baselineBlocks[i]
+    const diskBlock = sourceMap.diskBlocks[i]
+    if (diskBlock === undefined) {
+      return true
+    }
+
+    const diskBytes = diskBytesByBaseline.get(baselineBlock) ?? new Set<string>()
+    diskBytes.add(diskBlock)
+    diskBytesByBaseline.set(baselineBlock, diskBytes)
+
+    const indexes = baselineIndexes.get(baselineBlock) ?? []
+    indexes.push(i)
+    baselineIndexes.set(baselineBlock, indexes)
+  }
+
+  const matchPairs = new Set(matches.map(([baselineIdx, liveIdx]) => `${baselineIdx}:${liveIdx}`))
+
+  for (const [block, indexes] of baselineIndexes) {
+    const diskBytes = diskBytesByBaseline.get(block)
+    if (indexes.length < 2 || !diskBytes || diskBytes.size < 2) {
+      continue
+    }
+
+    const liveIndexes = liveBlocks
+      .map((liveBlock, index) => (liveBlock === block ? index : -1))
+      .filter((index) => index !== -1)
+
+    if (liveIndexes.length !== indexes.length) {
+      return true
+    }
+
+    for (let i = 0; i < indexes.length; i++) {
+      if (liveIndexes[i] !== indexes[i] || !matchPairs.has(`${indexes[i]}:${liveIndexes[i]}`)) {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 function selfCheck(spliced: string, sourceMap: SourceMap, matches: [number, number][]): boolean {
