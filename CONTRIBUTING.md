@@ -5,7 +5,7 @@ Thanks for your interest in contributing. This guide covers the development setu
 ## Getting Started
 
 ```bash
-git clone https://github.com/purecontext-dev/human-markdown.git
+git clone https://github.com/purecontext/human-markdown.git
 cd human-markdown
 pnpm install
 pnpm build

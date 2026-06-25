@@ -1,6 +1,6 @@
 {
   "$schema": "/Users/jeffreese/Code/crucible/plugins/crucible/schemas/pr-review.schema.json",
-  "gh_repo": "purecontext-dev/human-markdown",
+  "gh_repo": "purecontext/human-markdown",
   "target_repo_path": "/Users/jeffreese/Code/human-markdown",
   "test_command": "pnpm test",
   "smoke_testing": {
