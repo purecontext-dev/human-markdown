@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.5 - 2026-06-25
+
+### Changed
+- GitHub organization renamed from `purecontext-dev` to `purecontext`. Updated
+  all repository URLs and metadata.
+
 ## 0.5.4 - 2026-06-11
 
 ### Fixed

@@ -2,7 +2,7 @@
 
 A WYSIWYG markdown editor for VSCode. Open a markdown file, read it rendered, edit it inline. Toggle to raw with one keystroke. Theme it to match your blog or GitHub.
 
-**Repo:** github.com/purecontext-dev/human-markdown
+**Repo:** github.com/purecontext/human-markdown
 **License:** MIT
 
 ## Git Workflow

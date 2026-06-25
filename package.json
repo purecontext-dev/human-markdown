@@ -2,7 +2,7 @@
   "name": "human-markdown",
   "displayName": "Human Markdown",
   "description": "A WYSIWYG markdown editor for VSCode. Read and edit markdown as a human.",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "publisher": "purecontext",
   "license": "MIT",
   "icon": "icon.png",
@@ -16,7 +16,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/purecontext-dev/human-markdown"
+    "url": "https://github.com/purecontext/human-markdown"
   },
   "engines": {
     "vscode": "^1.85.0"
