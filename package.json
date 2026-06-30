@@ -205,7 +205,7 @@
     "remark-stringify": "^11.0.0",
     "typescript": "^6.0.3",
     "unified": "^11.0.5",
-    "vite": "^6.4.3",
+    "vite": "^8.1.0",
     "vitest": "^4.1.8"
   },
   "dependencies": {
